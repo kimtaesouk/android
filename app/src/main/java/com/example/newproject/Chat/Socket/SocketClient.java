@@ -11,7 +11,7 @@ import java.net.Socket;
 
 public class SocketClient extends AsyncTask<Void, Void, Void> {
     String serverIP = "172.20.10.3"; // 실제 서버 IP로 변경하세요.
-    int serverPort = 8080; // 사용하는 포트로 변경하세요.
+    int serverPort = 4040; // 사용하는 포트로 변경하세요.
     private String roompid;
     private String mypid;
     private String roomname;

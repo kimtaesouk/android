@@ -9,6 +9,7 @@ import android.graphics.Color;
 import android.media.RingtoneManager;
 import android.os.Build;
 import android.os.IBinder;
+import android.util.Log;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
@@ -129,6 +130,12 @@ public class SocketService extends Service {
         if (socketClient != null) {
             socketClient.stopSocket("CLOSE_SOCKET");
         }
+    }
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        Log.d("SocketService", "Service created");
     }
 
     @Nullable
