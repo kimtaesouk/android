@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.NewProject"
+        tools:targetApi="31">
+        <activity
+            android:name=".Chat.AddChatroom.AddChattingRoomActivity"
+            android:exported="false" />
+        <activity
+            android:name=".Chat.ChattingOptionActivity"
+            android:exported="false"
+            android:theme="@style/TransparentActivity" />
+        <activity
+            android:name=".Chat.ChattingActivity"
+            android:exported="false" />
+        <activity
+            android:name=".FriendDetail.FriendDetailActivity"
+            android:exported="false" />
+        <activity
+            android:name=".AddFriend.AddFriend_ID_Activity"
+            android:exported="false" />
+        <activity
+            android:name=".AddFriend.Ch_Activity"
+            android:exported="false"
+            android:theme="@style/TransparentActivity" />
+        <activity
+            android:name=".InfoChange_Ac.PwChange_Activity2"
+            android:exported="false" />
+        <activity
+            android:name=".InfoChange_Ac.PwChange_Activity1"
+            android:exported="false" />
+        <activity
+            android:name=".InfoChange_Ac.IdChange_Activity"
+            android:exported="false" />
+        <activity
+            android:name=".InfoChange_Ac.BirthChange_Activity"
+            android:exported="false" />
+        <activity
+            android:name=".InfoChange_Ac.NameChange_Activity"
+            android:exported="false" />
+        <activity
+            android:name=".Main.Main_Activity"
+            android:exported="false" />
+        <activity
+            android:name=".findpw.Findpw_Activity2"
+            android:exported="false" />
+        <activity
+            android:name=".findpw.Findpw_Activity"
+            android:exported="false" />
+        <activity
+            android:name=".singup.Singup_Activity3"
+            android:exported="false" />
+        <activity
+            android:name=".singup.Singup_Activity2"
+            android:exported="false" />
+        <activity
+            android:name=".singup.Singup_Activity"
+            android:exported="false" />
+        <activity
+            android:name=".Login.Login_Activity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

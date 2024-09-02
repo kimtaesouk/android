@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".Chat.ChattingActivity">
+
+    <!-- 채팅 내용이 스크롤되는 부분 -->
+    <LinearLayout
+        android:id="@+id/ll_chat"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+
+            <!-- 채팅 내용이 들어가는 뷰 -->
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_chat_list"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="bottom"
+            android:background="#D9E5FF"
+            android:scrollbars="vertical">
+        </androidx.recyclerview.widget.RecyclerView>
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:src="@drawable/baseline_add_24"
+                android:layout_gravity="center"
+                android:background="@null" />
+
+            <RelativeLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center">
+
+                <EditText
+                    android:id="@+id/et_talk"
+                    android:layout_width="320dp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:layout_marginBottom="10dp"
+                    android:background="@drawable/board"
+                    android:gravity="top|start"
+                    android:inputType="textMultiLine"
+                    android:maxLines="5"
+                    android:minHeight="50dp"
+                    android:scrollbars="vertical"/>
+
+
+                <ImageButton
+                    android:id="@+id/ib_send_talk"
+                    android:layout_width="35dp"
+                    android:layout_height="35dp"
+                    android:layout_alignStart="@+id/et_talk"
+                    android:layout_alignEnd="@+id/et_talk"
+                    android:layout_alignBottom="@+id/et_talk"
+                    android:layout_marginStart="280dp"
+                    android:layout_marginEnd="5dp"
+                    android:layout_marginBottom="5dp"
+                    android:background="@drawable/round_background_yellow_circle"
+                    android:contentDescription="Clear text"
+                    android:padding="0dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/baseline_arrow_upward_24"
+                    android:visibility="gone"/>
+
+            </RelativeLayout>
+
+
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- 상단에 고정된 이름 부분 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:id="@+id/ll_name"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:orientation="horizontal"
+            android:background="#D9D9E5FF"
+            android:layout_gravity="top|center"
+            android:elevation="8dp"> <!-- 높이 추가하여 앞에 오도록 함 -->
+
+            <ImageButton
+                android:id="@+id/ib_back"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/baseline_arrow_back_ios_new_24"
+                android:layout_gravity="center"
+                android:layout_margin="10dp"
+                android:background="@null"
+                />
+
+            <TextView
+                android:id="@+id/tv_friend_name"
+                android:layout_width="250dp"
+                android:layout_height="wrap_content"
+                android:text="name"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:layout_marginLeft="5dp"
+                android:textSize="30sp"
+                android:textStyle="bold"
+                android:background="@null"
+                android:maxLines="1"
+                android:ellipsize="end"/>
+
+            <ImageButton
+                android:id="@+id/ib_room_option"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/baseline_density_medium_24"
+                android:background="@null"
+                android:layout_gravity="center"
+                android:layout_marginLeft="30dp"/>
+
+        </LinearLayout>
+
+
+        <LinearLayout
+            android:id="@+id/ll_friend_add_or_block"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:background="@drawable/board"
+            android:gravity="center"
+            android:visibility="gone"
+            android:layout_margin="5dp">
+
+            <LinearLayout
+                android:id="@+id/ll_add_friend"
+                android:layout_width="wrap_content"
+                android:layout_height="50dp"
+                android:orientation="horizontal"
+                android:layout_weight="1"
+                android:gravity="center">
+                <ImageView
+                    android:layout_width="35dp"
+                    android:layout_height="35dp"
+                    android:src="@drawable/baseline_person_add_alt_1_24"
+                    android:background="@null"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="추가"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:layout_marginLeft="10dp"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/ll_block"
+                android:layout_width="wrap_content"
+                android:layout_height="50dp"
+                android:orientation="horizontal"
+                android:layout_weight="1"
+                android:gravity="center">
+                <ImageView
+                    android:layout_width="35dp"
+                    android:layout_height="35dp"
+                    android:src="@drawable/baseline_block_24"
+                    android:background="@null"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="차단"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:layout_marginLeft="10dp"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/ll_block_clear"
+                android:layout_width="wrap_content"
+                android:layout_height="50dp"
+                android:orientation="horizontal"
+                android:layout_weight="1"
+                android:gravity="center">
+                <ImageView
+                    android:layout_width="35dp"
+                    android:layout_height="35dp"
+                    android:src="@drawable/baseline_block_24"
+                    android:background="@null"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="차단해제"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:layout_marginLeft="10dp"/>
+            </LinearLayout>
+
+
+        </LinearLayout>
+    </LinearLayout>
+
+
+
+</FrameLayout>

@@ -1,0 +1,29 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 말풍선 본체 -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#FFEB3B"/> <!-- 배경 색상 카카오톡 노란색 -->
+            <corners android:radius="16dp"/> <!-- 모서리 둥글게 -->
+            <padding
+                android:left="8dp"
+                android:top="5dp"
+                android:right="8dp"
+                android:bottom="5dp"/>
+        </shape>
+    </item>
+
+    <!-- 삼각형 모양 (말풍선 꼬리) -->
+    <item android:gravity="end|bottom" android:right="10dp" android:bottom="0dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#FFEB3B"/> <!-- 배경 색상 카카오톡 노란색 -->
+            <rotate
+                android:fromDegrees="-45"
+                android:pivotX="50%"
+                android:pivotY="50%" />
+            <size
+                android:width="12dp"
+                android:height="12dp"/>
+        </shape>
+    </item>
+</layer-list>

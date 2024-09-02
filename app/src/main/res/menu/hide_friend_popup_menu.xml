@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/action_delete"
+        android:title="삭제" />
+    <item
+        android:id="@+id/action_block"
+        android:title="차단" />
+    <item
+        android:id="@+id/action_return"
+        android:title="친구목록으로 복귀" />
+</menu>

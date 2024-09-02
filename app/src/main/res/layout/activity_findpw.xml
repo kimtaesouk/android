@@ -1,0 +1,200 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".singup.Singup_Activity">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp">
+
+        <ImageButton
+            android:id="@+id/ib_back"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/baseline_arrow_back_ios_new_24"
+            android:background="@null"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="비밀번호 찾기"
+            android:textSize="25sp"
+            android:textStyle="bold"
+            android:layout_marginLeft="90dp"/>
+
+    </LinearLayout>
+
+    <!-- 회원가입 단계를 표시하는 LinearLayout -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:padding="16dp">
+
+        <!-- 첫 번째 단계 (원 안에 숫자) -->
+        <FrameLayout
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/round_background">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:text="1"
+                android:gravity="center"
+                android:textSize="18sp"
+                android:textColor="@android:color/white" />
+        </FrameLayout>
+
+        <!-- 단계 구분선 (점선) -->
+        <View
+            android:layout_width="135dp"
+            android:layout_height="2dp"
+            android:background="@drawable/dashed_divider"
+            android:layout_marginEnd="8dp"
+            android:layout_marginStart="8dp" />
+
+        <!-- 두 번째 단계 (원 안에 숫자) -->
+        <FrameLayout
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/round_background2">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:text="2"
+                android:gravity="center"
+                android:textSize="18sp"
+                android:textColor="@android:color/white" />
+        </FrameLayout>
+
+        <!-- 단계 구분선 (점선) -->
+
+
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="500dp"
+        android:orientation="vertical">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="70dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Email"
+                android:textSize="15sp"
+                android:layout_marginLeft="30dp"
+                android:textColor="#000000"/>
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginTop="20dp">
+
+            <EditText
+                android:id="@+id/et_email_findpw"
+                android:layout_width="230dp"
+                android:layout_height="40dp"
+                android:background="@drawable/board"
+                />
+            <Button
+                android:id="@+id/btn_findpw_email_confire"
+                android:layout_width="90dp"
+                android:layout_height="60dp"
+                android:layout_marginLeft="20dp"
+                android:text="인증번호 발송"
+                android:enabled="false" />
+        </LinearLayout>
+        <TextView
+            android:id="@+id/tv_check_email"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:layout_gravity="center"
+            android:layout_marginLeft="25dp"
+            android:textSize="15sp"
+            android:textColor="#FB0000"/>
+
+
+        <LinearLayout
+            android:id="@+id/ll_email_certification"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="30dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="인증번호"
+                    android:textSize="15sp"
+                    android:layout_marginLeft="30dp"
+                    android:textColor="#000000"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginTop="10dp">
+
+                <EditText
+                    android:id="@+id/et_email_certification"
+                    android:layout_width="230dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/board"
+                    />
+                <Button
+                    android:id="@+id/btn_email_certification_check"
+                    android:layout_width="90dp"
+                    android:layout_height="40dp"
+                    android:layout_marginLeft="20dp"
+                    android:text="확인"/>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tv_certification_timer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:layout_marginLeft="25dp"
+                android:textSize="15sp"
+                android:textColor="#000000"/>
+
+        </LinearLayout>
+
+
+    </LinearLayout>
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center">
+        <Button
+            android:id="@+id/btn_next"
+            android:layout_width="200dp"
+            android:layout_height="50dp"
+            android:text="다음"
+            android:enabled="false"/>
+    </LinearLayout>
+
+
+</LinearLayout>

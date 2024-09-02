@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".AddFriend.AddFriend_ID_Activity"
+    android:orientation="vertical">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/ib_back"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:src="@drawable/baseline_clear_24"
+            android:layout_gravity="center"
+            android:layout_margin="15dp"
+            android:background="@null"
+            />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="ID로 찾기"
+            android:textSize="30sp"
+            android:textStyle="bold"
+            android:layout_gravity="center"
+            android:layout_marginLeft="70dp"
+            />
+
+    </LinearLayout>
+
+    <RelativeLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="20dp">
+
+        <EditText
+            android:id="@+id/et_friend_id"
+            android:layout_width="300dp"
+            android:layout_height="50dp"
+            android:layout_centerHorizontal="true"
+            android:paddingEnd="40dp" />
+
+        <ImageButton
+            android:id="@+id/clear_button"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_alignTop="@id/et_friend_id"
+            android:layout_alignBottom="@id/et_friend_id"
+            android:layout_alignParentEnd="true"
+            android:layout_marginEnd="50dp"
+            android:background="?android:selectableItemBackgroundBorderless"
+            android:contentDescription="Clear text"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"/>
+
+    </RelativeLayout>
+
+    <LinearLayout
+        android:id="@+id/ll_my_id"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_margin="10dp"
+        android:background="@drawable/round_background3">
+        <TextView
+            android:layout_margin="20dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="내 아이디"
+            android:textSize="25sp"
+            android:textStyle="bold"
+            android:gravity="left"/>
+        <TextView
+            android:id="@+id/tv_myid"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_gravity="center"
+            android:layout_marginLeft="100dp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/ll_friend_pf"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_margin="10dp"
+        android:background="@drawable/round_background3"
+        android:visibility="gone"
+        android:gravity="center">
+
+        <ImageView
+            android:id="@+id/iv_profile_im"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:background="@drawable/rounded_rectangle"
+            android:src="@drawable/user"
+            android:gravity="center"
+            android:layout_marginTop="20dp"/>
+
+        <TextView
+            android:id="@+id/tv_friend_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="이름"
+            android:textSize="25sp"
+            android:textStyle="bold"
+            android:layout_marginTop="20dp"/>
+
+        <TextView
+            android:id="@+id/tv_isregistered_fr"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="이미 등록된 친구입니다."
+            android:layout_marginTop="10dp"
+            android:visibility="gone"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <Button
+                android:id="@+id/btn_talk"
+                android:layout_width="150dp"
+                android:layout_height="60dp"
+                android:text="1:1 대화"
+                android:textSize="25sp"
+                android:layout_margin="10dp"
+                android:visibility="gone"/>
+
+            <Button
+                android:id="@+id/btn_isblock"
+                android:layout_width="150dp"
+                android:layout_height="60dp"
+                android:text="차단"
+                android:textSize="25sp"
+                android:layout_margin="10dp"
+                android:visibility="gone"/>
+
+            <Button
+                android:id="@+id/btn_unblock"
+                android:layout_width="150dp"
+                android:layout_height="60dp"
+                android:text="차단 풀기"
+                android:textSize="25sp"
+                android:layout_margin="10dp"
+                android:visibility="gone"/>
+
+            <Button
+                android:id="@+id/btn_addfriends"
+                android:layout_width="150dp"
+                android:layout_height="60dp"
+                android:text="친구추가"
+                android:textSize="25sp"
+                android:layout_margin="10dp"
+                android:visibility="gone"/>
+
+        </LinearLayout>
+
+
+
+
+
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tv_isnot"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="검색결과 없습니다."
+        android:textSize="22sp"
+        android:layout_gravity="center"
+        android:visibility="gone"
+        android:layout_marginTop="20dp"/>
+
+    <Button
+        android:id="@+id/btn_idserch"
+        android:layout_width="200dp"
+        android:layout_height="60dp"
+        android:text="검색"
+        android:textSize="22sp"
+        android:layout_gravity="center"
+        android:layout_marginTop="150dp"
+        android:enabled="false"/>
+
+
+</LinearLayout>
