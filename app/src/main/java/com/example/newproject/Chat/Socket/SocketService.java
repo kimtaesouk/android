@@ -30,10 +30,10 @@ public class SocketService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         // SocketClient 초기화 및 연결 설정
-        System.out.println("넘어는옴" );
         String roompid = intent.getStringExtra("roompid");
         String roomname = intent.getStringExtra("roomname");
         String mypid = intent.getStringExtra("mypid");
+
         socketClient = new SocketClient(roompid, mypid, roomname, new SocketClient.Callback() {
             @Override
             public void onMessageReceived(final String message) {
@@ -46,7 +46,7 @@ public class SocketService extends Service {
                 int num = Integer.parseInt(parts[4].trim());
                 int notificationId = roomId.hashCode();
 
-                System.out.println(message);
+                System.out.println("99999 : " + message);
                 Intent broadcastIntent = new Intent("com.example.chatapp.NEW_MESSAGE");
                 broadcastIntent.putExtra("message", message);
                 sendBroadcast(broadcastIntent);

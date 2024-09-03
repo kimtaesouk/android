@@ -104,7 +104,7 @@ public class ChattingActivity extends AppCompatActivity {
             getData(my_pid, friendPidsString);
         } else {
             tv_friend_name.setText(roomname);
-            getData2(chattingroom_pid, friend_pid, "already_room_create");
+            getData2(chattingroom_pid);
         }
 
         IntentFilter filter = new IntentFilter("com.example.chatapp.NEW_MESSAGE");
@@ -117,7 +117,7 @@ public class ChattingActivity extends AppCompatActivity {
             getData(my_pid, friendPidsString);
         } else {
             tv_friend_name.setText(roomname);
-            getData2(chattingroom_pid, friend_pid, "already_room_create");
+            getData2(chattingroom_pid);
         }
 
         ib_back.setOnClickListener(new View.OnClickListener() {
@@ -211,6 +211,7 @@ public class ChattingActivity extends AppCompatActivity {
             if ("com.example.chatapp.NEW_MESSAGE".equals(action)) {
                 String msg = intent.getStringExtra("message").trim();
                 // 메시지를 RecyclerView에 추가하는 로직
+                System.out.println("BroadcastReceiver : " + msg);
                 addMessageToRecyclerView(msg);
             }
         }
@@ -241,15 +242,29 @@ public class ChattingActivity extends AppCompatActivity {
                         try {
                             if (!msg.equals("퇴장") && !msg.equals("입장")) {
                                 // 새로운 메시지를 처리하기 위해 getData2 호출
-                                getData2(chattingroom_pid, friend_pid, "already_room_create");
+                                Chatting chatMessage = new Chatting("0", chattingroom_pid, senderId, tv_friend_name.getText().toString(),msg,2, getCurrentTime(), 1);
+                                chatList.add(chatMessage);
+                                chattingAdapter.notifyItemInserted(chatList.size() - 1);
+                                rv_chat_list.scrollToPosition(chatList.size() - 1);
                             }
                         } catch (NumberFormatException e) {
                             Log.e("Chatting_Activity", "Invalid number format in message: " + parts[4]);
                         }
                     }
                 }
+
             }
         });
+    }
+    private String getCurrentTime() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            LocalDateTime now = LocalDateTime.now();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            return now.format(formatter);
+        } else {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+            return sdf.format(new Date());
+        }
     }
 
 
@@ -314,13 +329,7 @@ public class ChattingActivity extends AppCompatActivity {
                                     chattingroom_pid = jsonResponse.getString("chatting_room_pid");
                                     System.out.println("getData 에서 받아온 chattingroom_pid : " + chattingroom_pid);
                                     tv_friend_name.setText(roomname);
-                                    String room_status;
-                                    if (chattingroom_pid == null){
-                                        room_status = "room_create";
-                                    }else {
-                                        room_status = "already_room_create";
-                                    }
-                                    getData2(chattingroom_pid, friend_pid ,room_status);
+                                    getData2(chattingroom_pid);
                                     if (success.equals("isBlock")){
                                         ll_friend_add_or_block.setVisibility(View.VISIBLE);
 
@@ -393,8 +402,8 @@ public class ChattingActivity extends AppCompatActivity {
         setData2(friend_pids.get(0), my_pid, "isBlock");
     }
 
-    private void sendMessage(String roompid, String my_pid, ArrayList<String> friend_pid, String message) {
-        System.out.println(message);
+    private void sendMessage(String message) {
+        System.out.println("sendMessage");
         Intent serviceIntent = new Intent(getApplicationContext(), SocketService.class);
         serviceIntent.setAction("SEND_MESSAGE");
         serviceIntent.putExtra("roompid", chattingroom_pid);
@@ -436,11 +445,18 @@ public class ChattingActivity extends AppCompatActivity {
 
         // 메시지를 서버로 전송하는 로직
         if (!chatList.isEmpty()) {
-            sendMessage(chattingroom_pid, my_pid, friend_pids, msg);
+            sendMessage(my_pid + "/" + chattingroom_pid + "/" + roomname + "/" + msg);
             setData3(friend_pids, my_pid, msg);
             et_talk.setText(""); // 입력창 초기화
         }
     }
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        sendMessage(my_pid + "/" + chattingroom_pid + "/" + roomname + "/" + "퇴장");
+    }
+
+
 
     //친구등록이 없다가 처음 친구로 추가 될때
     private void setData(String my_pid, String f_pid) {
@@ -666,7 +682,7 @@ public class ChattingActivity extends AppCompatActivity {
         });
     }
 
-    private void getData2(String room_pid, String friend_pid, String room_status) {
+    private void getData2(String room_pid) {
         int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
         if (status == NetworkStatus.TYPE_NOT_CONNECTED) {
             Log.e("ChattingActivity", "네트워크 연결을 확인하세요.");
@@ -738,18 +754,10 @@ public class ChattingActivity extends AppCompatActivity {
                                     }
 
                                     // RecyclerView를 최신 메시지 위치로 스크롤
-
                                     rv_chat_list.scrollToPosition(chatList.size() - 1);
 
                                     // 사용자 입장 메시지 전송
-                                    if (room_status.equals("room_create")){
-                                        sendMessage(room_pid, my_pid,  friend_pids, "채팅방 생성");
-                                    }else{
-                                        sendMessage(room_pid, my_pid,  friend_pids, "입장");
-                                    }
-
-
-
+                                    sendMessage(my_pid + "/" + room_pid + "/" + roomname + "/" + "입장");
 
                                 } else {
                                     Log.e("ChattingActivity", "데이터 로드 실패 했습니다.");
