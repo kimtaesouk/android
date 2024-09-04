@@ -47,8 +47,10 @@ public class SocketService extends Service {
                 int notificationId = roomId.hashCode();
 
                 System.out.println("99999 : " + message);
-                Intent broadcastIntent = new Intent("com.example.chatapp.NEW_MESSAGE");
+                Intent broadcastIntent = new Intent("com.example.NewProject.NEW_MESSAGE");
                 broadcastIntent.putExtra("message", message);
+
+                Log.d("SocketService", "Broadcast sent with message: " + message);
                 sendBroadcast(broadcastIntent);
 
 //                notification manager 생성

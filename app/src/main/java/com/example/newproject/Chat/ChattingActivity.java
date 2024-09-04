@@ -63,7 +63,7 @@ public class ChattingActivity extends AppCompatActivity {
     ChattingAdapter chattingAdapter;
     ArrayList<Chatting> chatList = new ArrayList<>();
     ArrayList<String> friend_pids = new ArrayList<>();
-    int reader = 0;
+    int reader, num = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,6 +104,7 @@ public class ChattingActivity extends AppCompatActivity {
             getData(my_pid, friendPidsString);
         } else {
             tv_friend_name.setText(roomname);
+            setData4(chattingroom_pid, my_pid);
             getData2(chattingroom_pid);
         }
 
@@ -159,8 +160,6 @@ public class ChattingActivity extends AppCompatActivity {
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 // 텍스트가 변경되는 중에 호출됨
-
-
                 if(et_talk.getText().toString().isEmpty()){
                     // et_talk이 비면 ib_send_talk다시 안보이게
                     ib_send_talk.setVisibility(View.GONE);
@@ -204,11 +203,19 @@ public class ChattingActivity extends AppCompatActivity {
         });
     }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+        IntentFilter filter = new IntentFilter("com.example.NewProject.NEW_MESSAGE");
+        registerReceiver(messageReceiver, filter);
+    }
+
     private BroadcastReceiver messageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            if ("com.example.chatapp.NEW_MESSAGE".equals(action)) {
+            System.out.println("onReceive");
+            if ("com.example.NewProject.NEW_MESSAGE".equals(action)) {
                 String msg = intent.getStringExtra("message").trim();
                 // 메시지를 RecyclerView에 추가하는 로직
                 System.out.println("BroadcastReceiver : " + msg);
@@ -225,27 +232,43 @@ public class ChattingActivity extends AppCompatActivity {
                 String senderId = parts[0].trim();
                 String roomId = parts[1].trim();
                 String msg = parts.length > 3 ? parts[3].trim() : "";
-                int num = Integer.parseInt(parts[4].trim());
-                reader = num;
+                int num = Integer.parseInt(parts[4].trim()) - 1;
+                reader = friend_pids.size() - num;
                 if (roomId.equals(chattingroom_pid) && !senderId.equals(my_pid)) {
                     if (msg.equals("입장")) {
                         // 모든 메시지의 reader_count 업데이트
                         for (Chatting chat : chatList) {
-                            if (chat.getCount() != 2) {
-                                System.out.println("1234" + chat.getCount());
-                                chat.setCount(chat.getCount() + 1);
+                            if (chat.getCount() != 0) {
+                                System.out.println("addMessageToRecyclerView" + chat.getCount());
+                                chat.setCount(reader);
                             }
                         }
+                        chattingAdapter = new ChattingAdapter(chatList, getApplicationContext(), my_pid);
+                        rv_chat_list.setAdapter(chattingAdapter);
                         // RecyclerView 새로고침
                         chattingAdapter.notifyDataSetChanged();
                     } else {
                         try {
                             if (!msg.equals("퇴장") && !msg.equals("입장")) {
                                 // 새로운 메시지를 처리하기 위해 getData2 호출
-                                Chatting chatMessage = new Chatting("0", chattingroom_pid, senderId, tv_friend_name.getText().toString(),msg,2, getCurrentTime(), 1);
-                                chatList.add(chatMessage);
-                                chattingAdapter.notifyItemInserted(chatList.size() - 1);
-                                rv_chat_list.scrollToPosition(chatList.size() - 1);
+                                System.out.println("addMessageToRecyclerView" + msg);
+                                Chatting chatMessage = new Chatting("0", chattingroom_pid, senderId, tv_friend_name.getText().toString(),msg,reader, getCurrentTime(), 1);
+                                runOnUiThread(() -> {
+                                    // 리스트에 메시지 추가
+                                    chatList.add(chatMessage);
+
+                                    chattingAdapter = new ChattingAdapter(chatList, getApplicationContext(), my_pid);
+                                    rv_chat_list.setAdapter(chattingAdapter);
+
+                                    // 메시지를 리스트에 추가
+                                    chattingAdapter.notifyItemInserted(chatList.size() - 1);
+
+                                    // RecyclerView를 최신 메시지 위치로 스크롤
+                                    rv_chat_list.post(() -> {
+                                        rv_chat_list.scrollToPosition(chatList.size() - 1);
+                                    });
+
+                                });
                             }
                         } catch (NumberFormatException e) {
                             Log.e("Chatting_Activity", "Invalid number format in message: " + parts[4]);
@@ -329,6 +352,7 @@ public class ChattingActivity extends AppCompatActivity {
                                     chattingroom_pid = jsonResponse.getString("chatting_room_pid");
                                     System.out.println("getData 에서 받아온 chattingroom_pid : " + chattingroom_pid);
                                     tv_friend_name.setText(roomname);
+                                    setData4(chattingroom_pid, my_pid);
                                     getData2(chattingroom_pid);
                                     if (success.equals("isBlock")){
                                         ll_friend_add_or_block.setVisibility(View.VISIBLE);
@@ -403,7 +427,7 @@ public class ChattingActivity extends AppCompatActivity {
     }
 
     private void sendMessage(String message) {
-        System.out.println("sendMessage");
+        System.out.println("sendMessage 클릭");
         Intent serviceIntent = new Intent(getApplicationContext(), SocketService.class);
         serviceIntent.setAction("SEND_MESSAGE");
         serviceIntent.putExtra("roompid", chattingroom_pid);
@@ -425,7 +449,7 @@ public class ChattingActivity extends AppCompatActivity {
         }
 
         // 새로운 메시지 생성
-        Chatting chatMessage = new Chatting("0", chattingroom_pid, my_pid, "name", msg, friend_pids.size(), time, 1);
+        Chatting chatMessage = new Chatting("0", chattingroom_pid, my_pid, "name", msg, reader, time, 1);
 
         // UI 스레드에서 데이터를 추가하고 RecyclerView 갱신
         runOnUiThread(() -> {
@@ -439,7 +463,9 @@ public class ChattingActivity extends AppCompatActivity {
             chattingAdapter.notifyItemInserted(chatList.size() - 1);
 
             // RecyclerView를 최신 메시지 위치로 스크롤
-            rv_chat_list.scrollToPosition(chatList.size());
+            rv_chat_list.post(() -> {
+                rv_chat_list.scrollToPosition(chatList.size() - 1);
+            });
 
         });
 
@@ -725,6 +751,7 @@ public class ChattingActivity extends AppCompatActivity {
                                 JSONObject jsonResponse = new JSONObject(responseData);
                                 boolean success = jsonResponse.getBoolean("success");
 
+
                                 if (success) {
                                     JSONArray roomsArray = jsonResponse.getJSONArray("rooms");
 
@@ -742,7 +769,7 @@ public class ChattingActivity extends AppCompatActivity {
                                         int count = roomObject.getInt("count");
                                         int status = roomObject.getInt("status");
 
-                                        chatList.add(new Chatting(chatPid, room_pid, sender_pid, sender_name, msg, count, createTime, status));
+                                        chatList.add(new Chatting(chatPid, room_pid, sender_pid, sender_name, msg, reader, createTime, status));
                                     }
 
                                     // 어댑터 초기화 또는 갱신
@@ -754,7 +781,11 @@ public class ChattingActivity extends AppCompatActivity {
                                     }
 
                                     // RecyclerView를 최신 메시지 위치로 스크롤
-                                    rv_chat_list.scrollToPosition(chatList.size() - 1);
+                                    rv_chat_list.post(() -> {
+                                        rv_chat_list.scrollToPosition(chatList.size() - 1);
+                                    });
+
+
 
                                     // 사용자 입장 메시지 전송
                                     sendMessage(my_pid + "/" + room_pid + "/" + roomname + "/" + "입장");
@@ -762,6 +793,63 @@ public class ChattingActivity extends AppCompatActivity {
                                 } else {
                                     Log.e("ChattingActivity", "데이터 로드 실패 했습니다.");
                                 }
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                                Log.e("ChattingActivity", "응답 처리 중 오류가 발생했습니다.");
+                            }
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                });
+            }
+        });
+    }
+
+    private void setData4(String room_pid, String reader_pid) {
+        int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
+        if (status == NetworkStatus.TYPE_NOT_CONNECTED) {
+            Log.e("ChattingActivity", "네트워크 연결을 확인하세요.");
+            return;
+        }
+
+        HttpUrl.Builder urlBuilder = HttpUrl.parse("http://49.247.32.169/NewProject/Update_Chatting_Reader.php").newBuilder();
+        urlBuilder.addQueryParameter("v", "1.0");
+        String url = urlBuilder.build().toString();
+
+        RequestBody formBody = new FormBody.Builder()
+                .add("room_pid", room_pid)
+                .add("pid", reader_pid)
+                .build();
+
+        OkHttpClient client = new OkHttpClient();
+        Request request = new Request.Builder()
+                .url(url)
+                .post(formBody)
+                .build();
+
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                e.printStackTrace();
+                runOnUiThread(() -> Log.e("ChattingActivity", "네트워크 요청 실패"));
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                runOnUiThread(() -> {
+                    try {
+                        if (!response.isSuccessful()) {
+                            Log.e("ChattingActivity", "응답 실패");
+                        } else {
+                            Log.i("ChattingActivity", "응답 성공");
+                            final String responseData = response.body().string();
+                            Log.i("ChattingActivity setData4", "서버 응답: " + responseData);
+
+                            try {
+                                JSONObject jsonResponse = new JSONObject(responseData);
+                                boolean success = jsonResponse.getBoolean("success");
+
                             } catch (JSONException e) {
                                 e.printStackTrace();
                                 Log.e("ChattingActivity", "응답 처리 중 오류가 발생했습니다.");
