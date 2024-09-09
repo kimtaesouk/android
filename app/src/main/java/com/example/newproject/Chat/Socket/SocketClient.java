@@ -10,16 +10,16 @@ import java.io.PrintWriter;
 import java.net.Socket;
 
 public class SocketClient extends AsyncTask<Void, Void, Void> {
-    String serverIP = "172.30.1.55"; // 실제 서버 IP로 변경하세요.
-    int serverPort = 4040; // 사용하는 포트로 변경하세요.
+    private String serverIP = "192.168.0.6"; // 서버 IP를 적절히 변경하세요.
+    private int serverPort = 4040; // 사용하는 포트로 변경하세요.
     private String roompid;
     private String mypid;
     private String roomname;
     private Callback callback;
     private boolean isRunning = true;
     private PrintWriter out;
+    private BufferedReader in;
     private Socket socket;
-    private boolean isInitialized = false; // PrintWriter 초기화 상태 플래그
 
     public interface Callback {
         void onMessageReceived(String message);
@@ -37,13 +37,18 @@ public class SocketClient extends AsyncTask<Void, Void, Void> {
         try {
             socket = new Socket(serverIP, serverPort);
             out = new PrintWriter(socket.getOutputStream(), true);
-            isInitialized = true; // PrintWriter가 초기화되었음을 표시
-            out.println(mypid + "/" + roompid + "/" +  " " + "/" +"socket_open");
+            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            while (isRunning) {
-                String receivedMessage = in.readLine();
-                if (callback != null && receivedMessage != null) {
+            // 서버에 소켓 열림 메시지를 보냄
+            out.println(mypid + "/" + roompid + "/" + " " + "/" + "socket_open");
+
+            Log.d("SocketClient", "Connected to server: " + serverIP + ":" + serverPort);
+
+            // 서버로부터 메시지 수신 대기
+            String receivedMessage;
+            while (isRunning && (receivedMessage = in.readLine()) != null) {
+                Log.d("SocketClient", "Message received: " + receivedMessage);
+                if (callback != null) {
                     callback.onMessageReceived(receivedMessage);
                 }
             }
@@ -55,43 +60,42 @@ public class SocketClient extends AsyncTask<Void, Void, Void> {
         return null;
     }
 
+    // 메시지를 소켓을 통해 전송하는 메서드
+    public void sendMessage(final String message) {
+        new Thread(() -> {
+            if (out != null && !socket.isClosed()) {
+                synchronized (out) {
+                    out.println(message);
+                    Log.d("SocketClient", "Message sent: " + message);
+                }
+            } else {
+                Log.e("SocketClient", "Socket is not connected or output stream is null");
+            }
+        }).start();
+    }
+
+    // 소켓 연결을 중단하고 자원을 정리하는 메서드
+    public void stopSocket(final String message) {
+        isRunning = false;
+        sendMessage(message); // 서버에 종료 메시지 전송 (예: "socket_close")
+        closeResources();     // 자원 정리
+    }
+
+    // 소켓과 스트림을 닫는 메서드
     private void closeResources() {
         try {
             if (out != null) {
                 out.close();
             }
-            if (socket != null) {
+            if (in != null) {
+                in.close();
+            }
+            if (socket != null && !socket.isClosed()) {
                 socket.close();
             }
+            Log.d("SocketClient", "Socket and resources closed");
         } catch (IOException e) {
             Log.e("SocketClient", "IOException on close: " + e.getMessage());
         }
-    }
-
-    public void sendMessage(final String message) {
-        new Thread(() -> {
-            synchronized (this) {
-                try {
-                    socket = new Socket(serverIP, serverPort);
-                    out = new PrintWriter(socket.getOutputStream(), true);
-                    if (out != null ) {
-                        out.println(message);
-                    } else {
-                        System.out.println(isInitialized);
-                        Log.e("SocketClient", "PrintWriter not initialized or socket is not connected");
-                    }
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        }).start();
-    }
-
-
-
-    public void stopSocket(final String message) {
-        isRunning = false;
-        sendMessage(message); // Send CLOSE_MESSAGE or any final message
-        closeResources(); // Close the socket and other resources immediately
     }
 }

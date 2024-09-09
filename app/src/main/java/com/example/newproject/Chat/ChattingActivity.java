@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.app.ActivityManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -39,6 +40,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Locale;
 
 import okhttp3.Call;
@@ -63,8 +66,9 @@ public class ChattingActivity extends AppCompatActivity {
     ChattingAdapter chattingAdapter;
     ArrayList<Chatting> chatList = new ArrayList<>();
     ArrayList<String> friend_pids = new ArrayList<>();
+    HashMap<String, String> pidNameMap = new HashMap<>(); // PID를 키로 하고 이름을 값으로 하는 HashMap
     int reader, num = 0;
-
+    JSONObject names;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -108,17 +112,33 @@ public class ChattingActivity extends AppCompatActivity {
             getData2(chattingroom_pid);
         }
 
-        IntentFilter filter = new IntentFilter("com.example.chatapp.NEW_MESSAGE");
+
+        // BroadcastReceiver 등록
+        IntentFilter filter = new IntentFilter("com.example.NewProject.NEW_MESSAGE");
         registerReceiver(messageReceiver, filter);
 
+// SocketService 시작
+        Intent serviceIntent = new Intent(this, SocketService.class);
+        serviceIntent.putExtra("roompid", chattingroom_pid); // 방 ID
+        serviceIntent.putExtra("roomname", roomname);        // 방 이름
+        serviceIntent.putExtra("mypid", my_pid);             // 내 ID
+        serviceIntent.putExtra("message", "입장");           // 입장 메시지
+
+// 서비스가 실행 중이 아니면 시작
+        if (!isMyServiceRunning(SocketService.class)) {
+            startService(serviceIntent);
+        }
+
         if(friend_pids.size() == 1 || chattingroom_pid == null){
-            // friend_pids 리스트를 콤마로 구분된 문자열로 변환하여 전달
             String friendPidsString = TextUtils.join(",", friend_pids);
-            System.out.println("getData 로 넘기기전 friend_pid : " + friendPidsString);
             getData(my_pid, friendPidsString);
         } else {
             tv_friend_name.setText(roomname);
+            setData4(chattingroom_pid, my_pid);
             getData2(chattingroom_pid);
+
+            // 새 채팅방에 접속 시 서비스 연결
+            connectToSocketService();
         }
 
         ib_back.setOnClickListener(new View.OnClickListener() {
@@ -204,11 +224,66 @@ public class ChattingActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // 메시지 전송
+        sendMessage(my_pid + "/" + chattingroom_pid + "/" + roomname + "/" + "퇴장");
+
+        // BroadcastReceiver 해제
+        try {
+            unregisterReceiver(messageReceiver);
+        } catch (IllegalArgumentException e) {
+            Log.e("ChattingActivity", "Receiver not registered", e);
+        }
+    }
+
+    @Override
     protected void onStart() {
         super.onStart();
+        // BroadcastReceiver 등록
         IntentFilter filter = new IntentFilter("com.example.NewProject.NEW_MESSAGE");
         registerReceiver(messageReceiver, filter);
+
+        // 새 채팅방에 접속 시 서비스 연결
+        connectToSocketService();
     }
+
+
+    private boolean isMyServiceRunning(Class<?> serviceClass) {
+        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        if (manager != null) {
+            for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+                if (serviceClass.getName().equals(service.service.getClassName())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+
+
+    private void connectToSocketService() {
+        Intent serviceIntent = new Intent(this, SocketService.class);
+        serviceIntent.putExtra("roompid", chattingroom_pid); // 방 ID
+        serviceIntent.putExtra("roomname", roomname);        // 방 이름
+        serviceIntent.putExtra("mypid", my_pid);             // 내 ID
+        serviceIntent.putExtra("message", "입장");
+
+        // 기존 서비스가 실행 중이면 종료
+//        if (isMyServiceRunning(SocketService.class)) {
+//            stopService(serviceIntent);
+//            Log.d("ChattingActivity", "Service stopped for restarting");
+//        }
+
+        // 딜레이 후 서비스 재시작 (500ms 정도 대기)
+        rv_chat_list.postDelayed(() -> {
+            startService(serviceIntent);
+            Log.d("ChattingActivity", "Service started with new room PID: " + chattingroom_pid);
+        }, 500);  // 500ms 딜레이
+    }
+
+
 
     private BroadcastReceiver messageReceiver = new BroadcastReceiver() {
         @Override
@@ -251,8 +326,10 @@ public class ChattingActivity extends AppCompatActivity {
                         try {
                             if (!msg.equals("퇴장") && !msg.equals("입장")) {
                                 // 새로운 메시지를 처리하기 위해 getData2 호출
+                                // pidNameMap에서 senderId로 이름을 가져옴
+                                String senderName = pidNameMap.getOrDefault(senderId, "Unknown"); // senderId로 이름 찾기
                                 System.out.println("addMessageToRecyclerView" + msg);
-                                Chatting chatMessage = new Chatting("0", chattingroom_pid, senderId, tv_friend_name.getText().toString(),msg,reader, getCurrentTime(), 1);
+                                Chatting chatMessage = new Chatting("0", chattingroom_pid, senderId, senderName,msg,reader, getCurrentTime(), 1);
                                 runOnUiThread(() -> {
                                     // 리스트에 메시지 추가
                                     chatList.add(chatMessage);
@@ -348,7 +425,7 @@ public class ChattingActivity extends AppCompatActivity {
                                 try {
                                     JSONObject jsonResponse = new JSONObject(responseData);
                                     String success = jsonResponse.getString("success");
-                                    roomname = jsonResponse.getString("name");
+                                    roomname = jsonResponse.getString("roomname");
                                     chattingroom_pid = jsonResponse.getString("chatting_room_pid");
                                     System.out.println("getData 에서 받아온 chattingroom_pid : " + chattingroom_pid);
                                     tv_friend_name.setText(roomname);
@@ -476,11 +553,7 @@ public class ChattingActivity extends AppCompatActivity {
             et_talk.setText(""); // 입력창 초기화
         }
     }
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        sendMessage(my_pid + "/" + chattingroom_pid + "/" + roomname + "/" + "퇴장");
-    }
+
 
 
 
@@ -744,13 +817,12 @@ public class ChattingActivity extends AppCompatActivity {
                             Log.e("ChattingActivity", "응답 실패");
                         } else {
                             Log.i("ChattingActivity", "응답 성공");
-                            final String responseData = response.body().string();
+                            String responseData = response.body().string();
                             Log.i("ChattingActivity", "서버 응답: " + responseData);
 
                             try {
                                 JSONObject jsonResponse = new JSONObject(responseData);
                                 boolean success = jsonResponse.getBoolean("success");
-
 
                                 if (success) {
                                     JSONArray roomsArray = jsonResponse.getJSONArray("rooms");
@@ -772,6 +844,14 @@ public class ChattingActivity extends AppCompatActivity {
                                         chatList.add(new Chatting(chatPid, room_pid, sender_pid, sender_name, msg, reader, createTime, status));
                                     }
 
+                                    JSONObject namesObject = jsonResponse.getJSONObject("names");
+                                    Iterator<String> keys = namesObject.keys();
+                                    while (keys.hasNext()) {
+                                        String key = keys.next();
+                                        String name = namesObject.getString(key);
+                                        pidNameMap.put(key, name); // HashMap에 저장
+                                        Log.i("ChattingActivity", "Participant PID: " + key + ", Name: " + name);
+                                    }
                                     // 어댑터 초기화 또는 갱신
                                     if (chattingAdapter == null) {
                                         chattingAdapter = new ChattingAdapter(chatList, getApplicationContext(), my_pid);
@@ -784,8 +864,6 @@ public class ChattingActivity extends AppCompatActivity {
                                     rv_chat_list.post(() -> {
                                         rv_chat_list.scrollToPosition(chatList.size() - 1);
                                     });
-
-
 
                                     // 사용자 입장 메시지 전송
                                     sendMessage(my_pid + "/" + room_pid + "/" + roomname + "/" + "입장");
@@ -805,6 +883,8 @@ public class ChattingActivity extends AppCompatActivity {
             }
         });
     }
+
+
 
     private void setData4(String room_pid, String reader_pid) {
         int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
