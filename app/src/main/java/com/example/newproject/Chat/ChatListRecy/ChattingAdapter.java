@@ -102,7 +102,14 @@ public class ChattingAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             SentViewHolder sentHolder = (SentViewHolder) holder;
             Chatting chatting = (Chatting) chatListWithDates.get(position);
             sentHolder.tv_sent_msg.setText(chatting.msg);
-            sentHolder.tv_sent_count.setText(String.valueOf(chatting.count));
+            if (chatting.count == 0) {
+                // count가 0일 때 TextView를 숨김
+                sentHolder.tv_sent_count.setVisibility(View.GONE);
+            } else {
+                // count가 0이 아닐 때 TextView를 보여주고 값을 설정
+                sentHolder.tv_sent_count.setVisibility(View.VISIBLE);
+                sentHolder.tv_sent_count.setText(String.valueOf(chatting.count));
+            }
 
             String dateTimeString = chatting.create;
             SimpleDateFormat originalFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -122,7 +129,14 @@ public class ChattingAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             ReceivedViewHolder receivedHolder = (ReceivedViewHolder) holder;
             Chatting chatting = (Chatting) chatListWithDates.get(position);
             receivedHolder.tv_other_msg.setText(chatting.msg);
-            receivedHolder.tv_other_reder.setText(String.valueOf(chatting.count));
+            if (chatting.count == 0) {
+                // count가 0일 때 TextView를 숨김
+                receivedHolder.tv_other_reder.setVisibility(View.GONE);
+            } else {
+                // count가 0이 아닐 때 TextView를 보여주고 값을 설정
+                receivedHolder.tv_other_reder.setVisibility(View.VISIBLE);
+                receivedHolder.tv_other_reder.setText(String.valueOf(chatting.count));
+            }
 
             String dateTimeString = chatting.create;
             SimpleDateFormat originalFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");

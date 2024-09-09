@@ -831,7 +831,7 @@ public class ChattingActivity extends AppCompatActivity {
                                         int count = roomObject.getInt("count");
                                         int status = roomObject.getInt("status");
 
-                                        chatList.add(new Chatting(chatPid, room_pid, sender_pid, sender_name, msg, reader, createTime, status));
+                                        chatList.add(new Chatting(chatPid, room_pid, sender_pid, sender_name, msg, count, createTime, status));
                                     }
 
                                     JSONObject namesObject = jsonResponse.getJSONObject("names");
