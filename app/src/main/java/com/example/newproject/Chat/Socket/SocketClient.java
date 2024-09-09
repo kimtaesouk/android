@@ -10,7 +10,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 
 public class SocketClient extends AsyncTask<Void, Void, Void> {
-    private String serverIP = "192.168.0.6"; // 서버 IP를 적절히 변경하세요.
+    private String serverIP = "172.30.1.81"; // 서버 IP를 적절히 변경하세요.
     private int serverPort = 4040; // 사용하는 포트로 변경하세요.
     private String roompid;
     private String mypid;

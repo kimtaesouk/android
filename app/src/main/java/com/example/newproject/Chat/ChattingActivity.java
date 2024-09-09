@@ -515,18 +515,8 @@ public class ChattingActivity extends AppCompatActivity {
     }
 
     private void onSendTalk(String msg, String my_pid, ArrayList<String> friend_pids) {
-        String time;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            LocalDateTime now = LocalDateTime.now();
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            time = now.format(formatter);
-        } else {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
-            time = sdf.format(new Date());
-        }
-
         // 새로운 메시지 생성
-        Chatting chatMessage = new Chatting("0", chattingroom_pid, my_pid, "name", msg, reader, time, 1);
+        Chatting chatMessage = new Chatting("0", chattingroom_pid, my_pid, "name", msg, reader, getCurrentTime(), 1);
 
         // UI 스레드에서 데이터를 추가하고 RecyclerView 갱신
         runOnUiThread(() -> {
