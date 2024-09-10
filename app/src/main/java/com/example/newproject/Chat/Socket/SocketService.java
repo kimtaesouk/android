@@ -74,7 +74,7 @@ public class SocketService extends Service {
         String senderId = parts[0].trim();
         String roomId = parts[1].trim();
         String msg = parts.length > 3 ? parts[3].trim() : "";
-        int num = Integer.parseInt(parts[4].trim());
+        String clients = parts.length > 4 ? parts[4].trim() : "";
         int notificationId = roomId.hashCode();
 
         Intent broadcastIntent = new Intent("com.example.NewProject.NEW_MESSAGE");

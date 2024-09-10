@@ -42,7 +42,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -67,6 +69,7 @@ public class ChattingActivity extends AppCompatActivity {
     ArrayList<Chatting> chatList = new ArrayList<>();
     ArrayList<String> friend_pids = new ArrayList<>();
     HashMap<String, String> pidNameMap = new HashMap<>(); // PID를 키로 하고 이름을 값으로 하는 HashMap
+    ArrayList<String> clientList = new ArrayList<>();
     int reader, num = 0;
     JSONObject names;
     @Override
@@ -97,9 +100,9 @@ public class ChattingActivity extends AppCompatActivity {
         chattingroom_pid = intent.getStringExtra("room_pid");
         roomname = intent.getStringExtra("roomname");
 
-        System.out.println("chattinaActivity : " + chattingroom_pid );
+        System.out.println("chattinaActivity chattingroom_pid : " + chattingroom_pid );
         friend_pids = intent.getStringArrayListExtra("friend_pid");
-        System.out.println(friend_pids);
+        System.out.println("chattinaActivity friend_pids수 : " + friend_pids.size());
 
         if(friend_pids.size() == 1 || chattingroom_pid == null){
             // friend_pids 리스트를 JSON 배열 형태의 문자열로 변환하여 전달
@@ -160,17 +163,12 @@ public class ChattingActivity extends AppCompatActivity {
         ib_room_option.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 Intent intent1 = new Intent(getApplicationContext() , ChattingOptionActivity.class);
                 startActivity(intent1);
             }
         });
-
         ArrayList<String> finalFriend_pids = friend_pids;
-
         // EditText에 TextWatcher를 추가하여 텍스트가 변경될 때마다 처리
-
-
         et_talk.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -303,59 +301,78 @@ public class ChattingActivity extends AppCompatActivity {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                String[] parts = message.split(":");
-                String senderId = parts[0].trim();
-                String roomId = parts[1].trim();
-                String msg = parts.length > 3 ? parts[3].trim() : "";
-                int num = Integer.parseInt(parts[4].trim()) - 1;
-                reader = friend_pids.size() - num;
-                if (roomId.equals(chattingroom_pid) && !senderId.equals(my_pid)) {
-                    if (msg.equals("입장")) {
-                        // 모든 메시지의 reader_count 업데이트
-                        for (Chatting chat : chatList) {
-                            if (chat.getCount() != 0) {
-                                System.out.println("addMessageToRecyclerView" + chat.getCount());
-                                chat.setCount(reader);
+                String[] parts = new String[0];
+                try {
+                    // 메시지 파싱
+                    parts = message.split(":");
+                    String senderId = parts[0].trim();
+                    String roomId = parts[1].trim();
+                    String msg = parts.length > 3 ? parts[3].trim() : "";
+                    // 클라이언트 리스트 (콤마로 구분된 문자열)
+                    String clients = parts.length > 4 ? parts[4].trim() : "";
+
+                    clientList = new ArrayList<>(List.of(clients.split(",")));
+
+                    // my_pid와 일치하는 항목을 제외
+                    clientList = clientList.stream()
+                            .filter(pid -> !pid.equals(my_pid))  // my_pid와 다른 pid만 남김
+                            .collect(Collectors.toCollection(ArrayList::new));  // 다시 ArrayList로 변환
+
+                    // 클라이언트 수를 기반으로 reader 수 계산
+                    reader =  friend_pids.size() - clientList.size() ;
+                    System.out.println("addMessageToRecyclerView reader : " + reader );
+                    System.out.println("addMessageToRecyclerView clientList : " + clientList.size() );
+
+                    // 현재 채팅방에 해당하는 메시지인지 확인
+                    if (roomId.equals(chattingroom_pid) && !senderId.equals(my_pid)) {
+                        // 입장 메시지 처리
+                        if (msg.equals("입장")) {
+                            System.out.println("message senderId : " + senderId);
+                            System.out.println("addMessageToRecyclerView 입장 friend_pids수 : " + friend_pids.size());
+
+                            // 모든 메시지의 reader_count 업데이트
+                            for (Chatting chat : chatList) {
+                                if (chat.getCount() != 0) {
+                                    chat.setCount(reader);
+                                }
                             }
-                        }
-                        chattingAdapter = new ChattingAdapter(chatList, getApplicationContext(), my_pid);
-                        rv_chat_list.setAdapter(chattingAdapter);
-                        // RecyclerView 새로고침
-                        chattingAdapter.notifyDataSetChanged();
-                    } else {
-                        try {
-                            if (!msg.equals("퇴장") && !msg.equals("입장")) {
-                                // 새로운 메시지를 처리하기 위해 getData2 호출
-                                // pidNameMap에서 senderId로 이름을 가져옴
-                                String senderName = pidNameMap.getOrDefault(senderId, "Unknown"); // senderId로 이름 찾기
-                                System.out.println("addMessageToRecyclerView" + msg);
-                                Chatting chatMessage = new Chatting("0", chattingroom_pid, senderId, senderName,msg,reader, getCurrentTime(), 1);
-                                runOnUiThread(() -> {
-                                    // 리스트에 메시지 추가
-                                    chatList.add(chatMessage);
 
-                                    chattingAdapter = new ChattingAdapter(chatList, getApplicationContext(), my_pid);
-                                    rv_chat_list.setAdapter(chattingAdapter);
+                            // 어댑터 갱신 및 RecyclerView 새로고침
+                            chattingAdapter = new ChattingAdapter(chatList, getApplicationContext(), my_pid);
+                            rv_chat_list.setAdapter(chattingAdapter);
+                            chattingAdapter.notifyDataSetChanged();
 
-                                    // 메시지를 리스트에 추가
-                                    chattingAdapter.notifyItemInserted(chatList.size() - 1);
+                            // 퇴장 메시지 처리
+                        } else if (msg.equals("퇴장")) {
+                            System.out.println("addMessageToRecyclerView clientList 퇴장 : " + clientList.size() );
+                            // 일반 메시지 처리
+                        } else {
+                            // pidNameMap에서 senderId에 해당하는 이름을 찾음
+                            String senderName = pidNameMap.getOrDefault(senderId, "Unknown");
+                            System.out.println("addMessageToRecyclerView" + msg);
 
-                                    // RecyclerView를 최신 메시지 위치로 스크롤
-                                    rv_chat_list.post(() -> {
-                                        rv_chat_list.scrollToPosition(chatList.size() - 1);
-                                    });
+//                            num = friend_pids.size() + 1;
 
-                                });
-                            }
-                        } catch (NumberFormatException e) {
-                            Log.e("Chatting_Activity", "Invalid number format in message: " + parts[4]);
+                            // 새로운 채팅 메시지 생성 및 추가
+                            Chatting chatMessage = new Chatting("0", chattingroom_pid, senderId, senderName, msg, reader, getCurrentTime(), 1);
+                            chatList.add(chatMessage);
+
+                            // 어댑터 갱신 및 RecyclerView에 메시지 추가
+                            chattingAdapter = new ChattingAdapter(chatList, getApplicationContext(), my_pid);
+                            rv_chat_list.setAdapter(chattingAdapter);
+                            chattingAdapter.notifyItemInserted(chatList.size() - 1);
+
+                            // RecyclerView를 최신 메시지 위치로 스크롤
+                            rv_chat_list.post(() -> rv_chat_list.scrollToPosition(chatList.size() - 1));
                         }
                     }
+                } catch (NumberFormatException e) {
+                    Log.e("Chatting_Activity", "Invalid number format in message: " + parts[4]);
                 }
-
             }
         });
     }
+
     private String getCurrentTime() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             LocalDateTime now = LocalDateTime.now();
@@ -515,11 +532,16 @@ public class ChattingActivity extends AppCompatActivity {
     }
 
     private void onSendTalk(String msg, String my_pid, ArrayList<String> friend_pids) {
+        System.out.println("onSendTalk friend_pids : " + friend_pids.size());
+//        num = friend_pids.size() + 1;
+        System.out.println(clientList.size());
+        System.out.println(reader);
         // 새로운 메시지 생성
         Chatting chatMessage = new Chatting("0", chattingroom_pid, my_pid, "name", msg, reader, getCurrentTime(), 1);
 
         // UI 스레드에서 데이터를 추가하고 RecyclerView 갱신
         runOnUiThread(() -> {
+            // 리스트에 메시지 추가
             // 리스트에 메시지 추가
             chatList.add(chatMessage);
 
@@ -713,7 +735,7 @@ public class ChattingActivity extends AppCompatActivity {
         // ArrayList<String> friend_pids를 콤마로 구분된 문자열로 변환
         String friendPidsString = TextUtils.join(",", friend_pids);
 
-        System.out.println("12341234 : " + friend_pids);
+        System.out.println("setData3 friend_pids수 : " + friend_pids.size());
 
         // POST 방식 파라미터 추가
         RequestBody formBody = new FormBody.Builder()
@@ -801,78 +823,73 @@ public class ChattingActivity extends AppCompatActivity {
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                // 네트워크 작업은 비동기적으로 처리하고 UI 업데이트는 runOnUiThread() 내에서 실행
+                final String responseData = response.body().string();
+
                 runOnUiThread(() -> {
                     try {
                         if (!response.isSuccessful()) {
                             Log.e("ChattingActivity", "응답 실패");
                         } else {
                             Log.i("ChattingActivity", "응답 성공");
-                            String responseData = response.body().string();
-                            Log.i("ChattingActivity", "서버 응답: " + responseData);
+                            JSONObject jsonResponse = new JSONObject(responseData);
+                            boolean success = jsonResponse.getBoolean("success");
 
-                            try {
-                                JSONObject jsonResponse = new JSONObject(responseData);
-                                boolean success = jsonResponse.getBoolean("success");
+                            if (success) {
+                                JSONArray roomsArray = jsonResponse.getJSONArray("rooms");
 
-                                if (success) {
-                                    JSONArray roomsArray = jsonResponse.getJSONArray("rooms");
+                                // chatList 초기화 후 데이터 추가
+                                chatList.clear();
+                                for (int i = 0; i < roomsArray.length(); i++) {
+                                    JSONObject roomObject = roomsArray.getJSONObject(i);
 
-                                    // chatList 초기화 후 데이터 추가
-                                    chatList.clear();
-                                    for (int i = 0; i < roomsArray.length(); i++) {
-                                        JSONObject roomObject = roomsArray.getJSONObject(i);
+                                    String chatPid = roomObject.getString("pid");
+                                    String room_pid = roomObject.getString("room_pid");
+                                    String sender_pid = roomObject.getString("sender_pid");
+                                    String sender_name = roomObject.getString("sender_name");
+                                    String msg = roomObject.getString("msg");
+                                    String createTime = roomObject.getString("create");
+                                    int count = roomObject.getInt("count");
+                                    int status = roomObject.getInt("status");
 
-                                        String chatPid = roomObject.getString("pid");
-                                        String room_pid = roomObject.getString("room_pid");
-                                        String sender_pid = roomObject.getString("sender_pid");
-                                        String sender_name = roomObject.getString("sender_name");
-                                        String msg = roomObject.getString("msg");
-                                        String createTime = roomObject.getString("create");
-                                        int count = roomObject.getInt("count");
-                                        int status = roomObject.getInt("status");
-
-                                        chatList.add(new Chatting(chatPid, room_pid, sender_pid, sender_name, msg, count, createTime, status));
-                                    }
-
-                                    JSONObject namesObject = jsonResponse.getJSONObject("names");
-                                    Iterator<String> keys = namesObject.keys();
-                                    while (keys.hasNext()) {
-                                        String key = keys.next();
-                                        String name = namesObject.getString(key);
-                                        pidNameMap.put(key, name); // HashMap에 저장
-                                        Log.i("ChattingActivity", "Participant PID: " + key + ", Name: " + name);
-                                    }
-                                    // 어댑터 초기화 또는 갱신
-                                    if (chattingAdapter == null) {
-                                        chattingAdapter = new ChattingAdapter(chatList, getApplicationContext(), my_pid);
-                                        rv_chat_list.setAdapter(chattingAdapter);
-                                    } else {
-                                        chattingAdapter.notifyDataSetChanged();
-                                    }
-
-                                    // RecyclerView를 최신 메시지 위치로 스크롤
-                                    rv_chat_list.post(() -> {
-                                        rv_chat_list.scrollToPosition(chatList.size() - 1);
-                                    });
-
-                                    // 사용자 입장 메시지 전송
-                                    sendMessage(my_pid + "/" + room_pid + "/" + roomname + "/" + "입장");
-
-                                } else {
-                                    Log.e("ChattingActivity", "데이터 로드 실패 했습니다.");
+                                    chatList.add(new Chatting(chatPid, room_pid, sender_pid, sender_name, msg, count, createTime, status));
                                 }
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                                Log.e("ChattingActivity", "응답 처리 중 오류가 발생했습니다.");
+
+                                // 이름 매핑
+                                JSONObject namesObject = jsonResponse.getJSONObject("names");
+                                Iterator<String> keys = namesObject.keys();
+                                while (keys.hasNext()) {
+                                    String key = keys.next();
+                                    String name = namesObject.getString(key);
+                                    pidNameMap.put(key, name); // HashMap에 저장
+                                }
+
+                                // 어댑터 초기화 또는 갱신
+                                if (chattingAdapter == null) {
+                                    chattingAdapter = new ChattingAdapter(chatList, getApplicationContext(), my_pid);
+                                    rv_chat_list.setAdapter(chattingAdapter);
+                                } else {
+                                    chattingAdapter.notifyDataSetChanged();
+                                }
+
+                                // RecyclerView를 최신 메시지 위치로 스크롤
+                                rv_chat_list.post(() -> rv_chat_list.scrollToPosition(chatList.size() - 1));
+
+                                // 사용자 입장 메시지 전송
+                                sendMessage(my_pid + "/" + room_pid + "/" + roomname + "/" + "입장");
+                            } else {
+                                Log.e("ChattingActivity", "데이터 로드 실패");
                             }
                         }
-                    } catch (Exception e) {
+                    } catch (JSONException e) {
                         e.printStackTrace();
+                        Log.e("ChattingActivity", "응답 처리 중 오류 발생");
                     }
                 });
             }
         });
     }
+
 
 
 
