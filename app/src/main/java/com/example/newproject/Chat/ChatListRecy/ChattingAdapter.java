@@ -111,8 +111,8 @@ public class ChattingAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             }
 
             String dateTimeString = chatting.create;
-            SimpleDateFormat originalFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            SimpleDateFormat targetFormat = new SimpleDateFormat("a hh:mm");
+            SimpleDateFormat originalFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.KOREA);
+            SimpleDateFormat targetFormat = new SimpleDateFormat("a hh:mm", Locale.KOREA);
 
             try {
                 Date date = originalFormat.parse(dateTimeString);

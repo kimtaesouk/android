@@ -96,6 +96,7 @@ public class SocketService extends Service {
         String[] parts = message.split(":");
         String senderId = parts[0].trim();
         String roomId = parts[1].trim();
+        String roomname = parts[2].trim();
         String msg = parts.length > 3 ? parts[3].trim() : "";
         String clients = parts.length > 4 ? parts[4].trim() : "";
         int notificationId = roomId.hashCode();
@@ -115,13 +116,13 @@ public class SocketService extends Service {
 
         Intent notificationIntent = new Intent(SocketService.this, ChattingActivity.class);
         notificationIntent.putExtra("mypid", senderId);
-        notificationIntent.putExtra("name", roomId);
+        notificationIntent.putExtra("name", roomname);
         notificationIntent.putExtra("friendpid", senderId);
         notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         PendingIntent pendingIntent = PendingIntent.getActivity(SocketService.this, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
         NotificationCompat.Builder notifyBuilder = new NotificationCompat.Builder(SocketService.this, roomId)
-                .setContentTitle(roomId)
+                .setContentTitle(roomname)
                 .setContentText(msg)
                 .setSmallIcon(R.drawable.ic_stat_article)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)

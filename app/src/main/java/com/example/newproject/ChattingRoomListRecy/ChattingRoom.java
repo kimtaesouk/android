@@ -7,14 +7,16 @@ public class ChattingRoom {
     String create;
     int status;
     String last_msg;
+    int count;
 
-    public ChattingRoom(String pid, String roomname, String participants,String create, int status, String last_msg) {
+    public ChattingRoom(String pid, String roomname, String participants, String create, int status, String last_msg, int count) {
         this.pid = pid;
         this.roomname = roomname;
-        this.Participants = participants;
+        Participants = participants;
         this.create = create;
         this.status = status;
         this.last_msg = last_msg;
+        this.count = count;
     }
 
     public String getPid() {
@@ -63,5 +65,13 @@ public class ChattingRoom {
 
     public void setLast_msg(String last_msg) {
         this.last_msg = last_msg;
+    }
+
+    public int getCount() {
+        return count;
+    }
+
+    public void setCount(int count) {
+        this.count = count;
     }
 }

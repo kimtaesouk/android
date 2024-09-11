@@ -1,5 +1,4 @@
 package com.example.newproject.Chat;
-
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -54,7 +53,6 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
-
 public class ChattingActivity extends AppCompatActivity {
     // 친구의 이름을 표시할 TextView
     TextView tv_friend_name;
@@ -76,7 +74,6 @@ public class ChattingActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chatting);
-
         // XML 레이아웃에서 UI 요소를 연결
         tv_friend_name = findViewById(R.id.tv_friend_name); // 친구의 이름을 표시하는 TextView
         et_talk = findViewById(R.id.et_talk);               // 채팅 메시지를 입력하는 EditText
@@ -99,11 +96,9 @@ public class ChattingActivity extends AppCompatActivity {
         my_pid = intent.getStringExtra("my_pid"); // 내 PID를 받아옴
         chattingroom_pid = intent.getStringExtra("room_pid");
         roomname = intent.getStringExtra("roomname");
-
         System.out.println("chattinaActivity chattingroom_pid : " + chattingroom_pid );
         friend_pids = intent.getStringArrayListExtra("friend_pid");
         System.out.println("chattinaActivity friend_pids수 : " + friend_pids.size());
-
         if(friend_pids.size() == 1 || chattingroom_pid == null){
             // friend_pids 리스트를 JSON 배열 형태의 문자열로 변환하여 전달
             JSONArray jsonArray = new JSONArray(friend_pids);
@@ -111,39 +106,30 @@ public class ChattingActivity extends AppCompatActivity {
             getData(my_pid, friendPidsString);
         } else {
             tv_friend_name.setText(roomname);
-            setData4(chattingroom_pid, my_pid);
-            getData2(chattingroom_pid);
+            setData4(chattingroom_pid, my_pid, () -> getData2(chattingroom_pid));
         }
-
-
         // BroadcastReceiver 등록
         IntentFilter filter = new IntentFilter("com.example.NewProject.NEW_MESSAGE");
         registerReceiver(messageReceiver, filter);
-
 // SocketService 시작
         Intent serviceIntent = new Intent(this, SocketService.class);
         serviceIntent.putExtra("roompid", chattingroom_pid); // 방 ID
         serviceIntent.putExtra("roomname", roomname);        // 방 이름
         serviceIntent.putExtra("mypid", my_pid);             // 내 ID
         serviceIntent.putExtra("message", "입장");           // 입장 메시지
-
 // 서비스가 실행 중이 아니면 시작
         if (!isMyServiceRunning(SocketService.class)) {
             startService(serviceIntent);
         }
-
         if(friend_pids.size() == 1 || chattingroom_pid == null){
             String friendPidsString = TextUtils.join(",", friend_pids);
             getData(my_pid, friendPidsString);
         } else {
             tv_friend_name.setText(roomname);
-            setData4(chattingroom_pid, my_pid);
-            getData2(chattingroom_pid);
-
+            setData4(chattingroom_pid, my_pid, () -> getData2(chattingroom_pid));
             // 새 채팅방에 접속 시 서비스 연결
             connectToSocketService();
         }
-
         ib_back.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -156,8 +142,18 @@ public class ChattingActivity extends AppCompatActivity {
                 editor.putBoolean("shouldOpenChatFragment", true);
                 editor.apply();
                 startActivity(resultIntent);
-                finish(); // ChattingActivity 종료
-
+                try {
+                    // 메시지 전송
+                    sendMessage(my_pid + "/" + chattingroom_pid + "/" + roomname + "/" + "퇴장");
+                    // BroadcastReceiver 해제
+                    unregisterReceiver(messageReceiver);
+                    setData4(chattingroom_pid, my_pid, () -> {
+                        // setData4 완료 후 Activity 종료
+                        finish();
+                    });
+                } catch (IllegalArgumentException e) {
+                    Log.e("ChattingActivity", "Receiver not registered", e);
+                }
             }
         });
         ib_room_option.setOnClickListener(new View.OnClickListener() {
@@ -224,16 +220,9 @@ public class ChattingActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // 메시지 전송
-        sendMessage(my_pid + "/" + chattingroom_pid + "/" + roomname + "/" + "퇴장");
 
-        // BroadcastReceiver 해제
-        try {
-            unregisterReceiver(messageReceiver);
-        } catch (IllegalArgumentException e) {
-            Log.e("ChattingActivity", "Receiver not registered", e);
-        }
     }
+
     @Override
     protected void onStart() {
         super.onStart();
@@ -305,12 +294,10 @@ public class ChattingActivity extends AppCompatActivity {
                     clientList = new ArrayList<>(List.of(clients.split(",")));
 
                     // my_pid와 일치하는 항목을 제외
-                    clientList = clientList.stream()
-                            .filter(pid -> !pid.equals(my_pid))  // my_pid와 다른 pid만 남김
-                            .collect(Collectors.toCollection(ArrayList::new));  // 다시 ArrayList로 변환
+
 
                     // 클라이언트 수를 기반으로 reader 수 계산
-                    reader =  friend_pids.size() - clientList.size() ;
+                    reader =  friend_pids.size() + 1  - clientList.size() ;
                     System.out.println("addMessageToRecyclerView reader : " + reader );
                     System.out.println("addMessageToRecyclerView clientList : " + clientList.size() );
 
@@ -437,8 +424,8 @@ public class ChattingActivity extends AppCompatActivity {
                                     chattingroom_pid = jsonResponse.getString("chatting_room_pid");
                                     System.out.println("getData 에서 받아온 chattingroom_pid : " + chattingroom_pid);
                                     tv_friend_name.setText(roomname);
-                                    setData4(chattingroom_pid, my_pid);
-                                    getData2(chattingroom_pid);
+                                    setData4(chattingroom_pid, my_pid, () -> getData2(chattingroom_pid));
+
                                     if (success.equals("isBlock")){
                                         ll_friend_add_or_block.setVisibility(View.VISIBLE);
 
@@ -548,7 +535,6 @@ public class ChattingActivity extends AppCompatActivity {
             });
 
         });
-
         // 메시지를 서버로 전송하는 로직
         if (!chatList.isEmpty()) {
             sendMessage(my_pid + "/" + chattingroom_pid + "/" + roomname + "/" + msg);
@@ -556,10 +542,6 @@ public class ChattingActivity extends AppCompatActivity {
             et_talk.setText(""); // 입력창 초기화
         }
     }
-
-
-
-
     //친구등록이 없다가 처음 친구로 추가 될때
     private void setData(String my_pid, String f_pid) {
         int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
@@ -567,25 +549,21 @@ public class ChattingActivity extends AppCompatActivity {
             Log.e("ChattingActivity", "네트워크 연결을 확인하세요.");
             return;
         }
-
         // get방식 파라미터 추가
         HttpUrl.Builder urlBuilder = HttpUrl.parse("http://49.247.32.169/NewProject/Set_friend.php").newBuilder();
         urlBuilder.addQueryParameter("v", "1.0"); // 예시
         String url = urlBuilder.build().toString();
-
         // POST 파라미터 추가
         RequestBody formBody = new FormBody.Builder()
                 .add("my_pid", my_pid)
                 .add("f_pid", friend_pids.get(0))
                 .build();
-
         // 요청 만들기
         OkHttpClient client = new OkHttpClient();
         Request request = new Request.Builder()
                 .url(url)
                 .post(formBody)
                 .build();
-
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
@@ -597,7 +575,6 @@ public class ChattingActivity extends AppCompatActivity {
                     }
                 });
             }
-
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                 runOnUiThread(new Runnable() {
@@ -621,8 +598,6 @@ public class ChattingActivity extends AppCompatActivity {
                                     }else{
                                         Log.e("ChattingActivity", "친구추가 실패");
                                     }
-
-
                                 } catch (JSONException e) {
                                     e.printStackTrace();
                                     Log.e("ChattingActivity", "응답 처리 중 오류가 발생했습니다.");
@@ -636,7 +611,6 @@ public class ChattingActivity extends AppCompatActivity {
             }
         });
     }
-
     // 차단 되있던 친구를 다시 친구목록으로 가져옴
     private void setData2(String f_pid, String my_pid, String state) {
         int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
@@ -644,7 +618,6 @@ public class ChattingActivity extends AppCompatActivity {
             Log.e("ChattingActivity", "네트워크 연결을 확인하세요.");
             return;
         }
-
         // GET 방식 파라미터 추가
         HttpUrl.Builder urlBuilder = HttpUrl.parse("http://49.247.32.169/NewProject/Set_friends_state.php").newBuilder();
         urlBuilder.addQueryParameter("v", "1.0"); // 예시
@@ -658,21 +631,18 @@ public class ChattingActivity extends AppCompatActivity {
                 .add("f_pid", friend_pids.get(0))
                 .add("state", state)
                 .build();
-
         // 요청 만들기
         OkHttpClient client = new OkHttpClient();
         Request request = new Request.Builder()
                 .url(url)
                 .post(formBody)
                 .build();
-
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 e.printStackTrace();
                 runOnUiThread(() -> Log.e("ChattingActivity", "네트워크 요청 실패"));
             }
-
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                 runOnUiThread(() -> {
@@ -708,8 +678,6 @@ public class ChattingActivity extends AppCompatActivity {
             }
         });
     }
-
-
     //ib_send_talk클릭했을때 my_pid, 친구pid , massage
     private void setData3(ArrayList<String> friend_pids, String my_pid, String message) {
         int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
@@ -783,14 +751,12 @@ public class ChattingActivity extends AppCompatActivity {
             }
         });
     }
-
     private void getData2(String room_pid) {
         int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
         if (status == NetworkStatus.TYPE_NOT_CONNECTED) {
             Log.e("ChattingActivity", "네트워크 연결을 확인하세요.");
             return;
         }
-
         HttpUrl.Builder urlBuilder = HttpUrl.parse("http://49.247.32.169/NewProject/Get_chatlist.php").newBuilder();
         urlBuilder.addQueryParameter("v", "1.0");
         String url = urlBuilder.build().toString();
@@ -798,25 +764,21 @@ public class ChattingActivity extends AppCompatActivity {
         RequestBody formBody = new FormBody.Builder()
                 .add("room_pid", room_pid)
                 .build();
-
         OkHttpClient client = new OkHttpClient();
         Request request = new Request.Builder()
                 .url(url)
                 .post(formBody)
                 .build();
-
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 e.printStackTrace();
                 runOnUiThread(() -> Log.e("ChattingActivity", "네트워크 요청 실패"));
             }
-
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                 // 네트워크 작업은 비동기적으로 처리하고 UI 업데이트는 runOnUiThread() 내에서 실행
                 final String responseData = response.body().string();
-
                 runOnUiThread(() -> {
                     try {
                         if (!response.isSuccessful()) {
@@ -825,15 +787,12 @@ public class ChattingActivity extends AppCompatActivity {
                             Log.i("ChattingActivity", "응답 성공");
                             JSONObject jsonResponse = new JSONObject(responseData);
                             boolean success = jsonResponse.getBoolean("success");
-
                             if (success) {
                                 JSONArray roomsArray = jsonResponse.getJSONArray("rooms");
-
                                 // chatList 초기화 후 데이터 추가
                                 chatList.clear();
                                 for (int i = 0; i < roomsArray.length(); i++) {
                                     JSONObject roomObject = roomsArray.getJSONObject(i);
-
                                     String chatPid = roomObject.getString("pid");
                                     String room_pid = roomObject.getString("room_pid");
                                     String sender_pid = roomObject.getString("sender_pid");
@@ -842,10 +801,8 @@ public class ChattingActivity extends AppCompatActivity {
                                     String createTime = roomObject.getString("create");
                                     int count = roomObject.getInt("count");
                                     int status = roomObject.getInt("status");
-
                                     chatList.add(new Chatting(chatPid, room_pid, sender_pid, sender_name, msg, count, createTime, status));
                                 }
-
                                 // 이름 매핑
                                 JSONObject namesObject = jsonResponse.getJSONObject("names");
                                 Iterator<String> keys = namesObject.keys();
@@ -854,7 +811,6 @@ public class ChattingActivity extends AppCompatActivity {
                                     String name = namesObject.getString(key);
                                     pidNameMap.put(key, name); // HashMap에 저장
                                 }
-
                                 // 어댑터 초기화 또는 갱신
                                 if (chattingAdapter == null) {
                                     chattingAdapter = new ChattingAdapter(chatList, getApplicationContext(), my_pid);
@@ -862,10 +818,8 @@ public class ChattingActivity extends AppCompatActivity {
                                 } else {
                                     chattingAdapter.notifyDataSetChanged();
                                 }
-
                                 // RecyclerView를 최신 메시지 위치로 스크롤
                                 rv_chat_list.post(() -> rv_chat_list.scrollToPosition(chatList.size() - 1));
-
                                 // 사용자 입장 메시지 전송
                                 sendMessage(my_pid + "/" + room_pid + "/" + roomname + "/" + "입장");
                             } else {
@@ -880,39 +834,30 @@ public class ChattingActivity extends AppCompatActivity {
             }
         });
     }
-
-
-
-
-    private void setData4(String room_pid, String reader_pid) {
+    private void setData4(String room_pid, String reader_pid, Runnable callback) {
         int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
         if (status == NetworkStatus.TYPE_NOT_CONNECTED) {
             Log.e("ChattingActivity", "네트워크 연결을 확인하세요.");
             return;
         }
-
         HttpUrl.Builder urlBuilder = HttpUrl.parse("http://49.247.32.169/NewProject/Update_Chatting_Reader.php").newBuilder();
         urlBuilder.addQueryParameter("v", "1.0");
         String url = urlBuilder.build().toString();
-
         RequestBody formBody = new FormBody.Builder()
                 .add("room_pid", room_pid)
                 .add("pid", reader_pid)
                 .build();
-
         OkHttpClient client = new OkHttpClient();
         Request request = new Request.Builder()
                 .url(url)
                 .post(formBody)
                 .build();
-
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 e.printStackTrace();
                 runOnUiThread(() -> Log.e("ChattingActivity", "네트워크 요청 실패"));
             }
-
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                 runOnUiThread(() -> {
@@ -927,7 +872,12 @@ public class ChattingActivity extends AppCompatActivity {
                             try {
                                 JSONObject jsonResponse = new JSONObject(responseData);
                                 boolean success = jsonResponse.getBoolean("success");
-
+                                if (success){
+                                    // setData4가 성공하면 콜백 실행
+                                    if (callback != null) {
+                                        callback.run();
+                                    }
+                                }
                             } catch (JSONException e) {
                                 e.printStackTrace();
                                 Log.e("ChattingActivity", "응답 처리 중 오류가 발생했습니다.");
