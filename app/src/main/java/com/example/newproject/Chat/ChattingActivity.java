@@ -234,7 +234,6 @@ public class ChattingActivity extends AppCompatActivity {
             Log.e("ChattingActivity", "Receiver not registered", e);
         }
     }
-
     @Override
     protected void onStart() {
         super.onStart();
@@ -245,8 +244,6 @@ public class ChattingActivity extends AppCompatActivity {
         // 새 채팅방에 접속 시 서비스 연결
         connectToSocketService();
     }
-
-
     private boolean isMyServiceRunning(Class<?> serviceClass) {
         ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
         if (manager != null) {
@@ -258,31 +255,25 @@ public class ChattingActivity extends AppCompatActivity {
         }
         return false;
     }
-
-
-
     private void connectToSocketService() {
         Intent serviceIntent = new Intent(this, SocketService.class);
+        serviceIntent.setAction("JOIN_ROOM");
         serviceIntent.putExtra("roompid", chattingroom_pid); // 방 ID
         serviceIntent.putExtra("roomname", roomname);        // 방 이름
         serviceIntent.putExtra("mypid", my_pid);             // 내 ID
         serviceIntent.putExtra("message", "입장");
 
-        // 기존 서비스가 실행 중이면 종료
-//        if (isMyServiceRunning(SocketService.class)) {
-//            stopService(serviceIntent);
-//            Log.d("ChattingActivity", "Service stopped for restarting");
-//        }
-
-        // 딜레이 후 서비스 재시작 (500ms 정도 대기)
-        rv_chat_list.postDelayed(() -> {
+        // 서비스가 실행 중인지 확인하고, 실행 중이면 서비스 재시작 없이 명령만 보냄
+        if (!isMyServiceRunning(SocketService.class)) {
+            // 서비스가 실행 중이 아니면 처음 실행
             startService(serviceIntent);
-            Log.d("ChattingActivity", "Service started with new room PID: " + chattingroom_pid);
-        }, 500);  // 500ms 딜레이
+            Log.d("ChattingActivity", "Service started with room PID: " + chattingroom_pid);
+        } else {
+            // 서비스가 이미 실행 중이면 브로드캐스트로 새로운 방 입장 명령 전송
+            sendBroadcast(serviceIntent);
+            Log.d("ChattingActivity", "Service already running, sent JOIN_ROOM broadcast.");
+        }
     }
-
-
-
     private BroadcastReceiver messageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {

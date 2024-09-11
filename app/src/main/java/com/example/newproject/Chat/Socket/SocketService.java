@@ -27,49 +27,72 @@ public class SocketService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        // SocketClient 초기화 및 연결 설정
         if (intent != null) {
+            String action = intent.getAction();
             String roompid = intent.getStringExtra("roompid");
             String roomname = intent.getStringExtra("roomname");
             String mypid = intent.getStringExtra("mypid");
 
-            // 채팅방이 바뀔 때마다 소켓을 새로 설정
-            if (roompid != null && !roompid.equals(currentRoomId)) {
-                Log.d("SocketService", "Switching to a new room: " + roompid);
+            switch (action) {
+                case "SOCKET_OPEN":
+                    initializeSocketClient(mypid);
+                    break;
 
-                // 기존 소켓이 연결되어 있으면 종료
-                if (socketClient != null) {
-                    Log.d("SocketService", "Stopping existing socket for room: " + currentRoomId);
-                    socketClient.stopSocket("SWITCH_ROOM"); // 기존 소켓 종료
-                }
-
-                // 새로운 소켓 클라이언트로 연결 초기화
-                currentRoomId = roompid;
-                Log.d("SocketService", "Starting new socket for room: " + currentRoomId);
-                socketClient = new SocketClient(roompid, mypid, roomname, new SocketClient.Callback() {
-                    @Override
-                    public void onMessageReceived(final String message) {
-                        Log.d("SocketService", "Message received: " + message);
-                        handleIncomingMessage(message, roompid, roomname, mypid);
+                case "JOIN_ROOM":
+                    if (roompid != null && !roompid.equals(currentRoomId)) {
+                        currentRoomId = roompid;
+                        joinRoom(roompid, roomname, mypid);
                     }
-                });
-                socketClient.execute();  // 새로운 소켓 연결 시작
-            }
+                    break;
 
-            // 메시지 전송 로직
-            String action = intent.getAction();
-            if (action != null && action.equals("SEND_MESSAGE")) {
-                String message = intent.getStringExtra("message");
-                sendMessage(message);
+                case "SEND_MESSAGE":
+                    String message = intent.getStringExtra("message");
+                    sendMessage(message);
+                    break;
+
+                default:
+                    Log.d("SocketService", "Unknown action: " + action);
+                    break;
             }
         }
 
         return START_STICKY;
     }
 
+    // 소켓 초기화 (한 번만 설정)
+    private void initializeSocketClient(String mypid) {
+        if (socketClient == null) {
+            socketClient = new SocketClient(mypid, new SocketClient.Callback() {
+                @Override
+                public void onMessageReceived(final String message) {
+                    Log.d("SocketService", "Message received: " + message);
+                    handleIncomingMessage(message);
+                }
+            });
+            socketClient.execute();  // 소켓 연결 시작
+            Log.d("SocketService", "Socket initialized for user: " + mypid);
+        } else {
+            Log.d("SocketService", "Socket is already initialized");
+        }
+    }
+
+    // 새로운 방에 참여 (소켓 연결 유지)
+    private void joinRoom(String roompid, String roomname, String mypid) {
+        Log.d("SocketService", "Joining room: " + roompid);
+        if (socketClient != null) {
+            socketClient.sendMessage(mypid + "/" + roompid + "/" + roomname + "/입장");
+        }
+    }
+
+    // 메시지 전송
+    public void sendMessage(String message) {
+        if (socketClient != null) {
+            socketClient.sendMessage(message);
+        }
+    }
 
     // 메시지 처리 로직을 메서드로 분리
-    private void handleIncomingMessage(String message, String roompid, String roomname, String mypid) {
+    private void handleIncomingMessage(String message) {
         String[] parts = message.split(":");
         String senderId = parts[0].trim();
         String roomId = parts[1].trim();
@@ -91,14 +114,14 @@ public class SocketService extends Service {
         }
 
         Intent notificationIntent = new Intent(SocketService.this, ChattingActivity.class);
-        notificationIntent.putExtra("mypid", mypid);
-        notificationIntent.putExtra("name", roomname);
+        notificationIntent.putExtra("mypid", senderId);
+        notificationIntent.putExtra("name", roomId);
         notificationIntent.putExtra("friendpid", senderId);
         notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         PendingIntent pendingIntent = PendingIntent.getActivity(SocketService.this, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
         NotificationCompat.Builder notifyBuilder = new NotificationCompat.Builder(SocketService.this, roomId)
-                .setContentTitle(roomname)
+                .setContentTitle(roomId)
                 .setContentText(msg)
                 .setSmallIcon(R.drawable.ic_stat_article)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -140,11 +163,5 @@ public class SocketService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         return null;
-    }
-
-    public void sendMessage(String message) {
-        if (socketClient != null) {
-            socketClient.sendMessage(message);
-        }
     }
 }
