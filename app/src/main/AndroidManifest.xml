@@ -17,10 +17,15 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.NewProject"
         tools:targetApi="31">
+        <activity
+            android:name=".Chat.DetailProfile_to_Chat"
+            android:exported="false" />
+
         <service
             android:name=".Chat.Socket.SocketService"
             android:enabled="true"
             android:exported="false" />
+
         <activity
             android:name=".Chat.AddChatroom.AddChattingRoomActivity"
             android:exported="false" />
