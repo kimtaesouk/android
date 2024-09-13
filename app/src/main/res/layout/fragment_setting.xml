@@ -37,7 +37,7 @@
                 android:layout_width="70dp"
                 android:layout_height="70dp"
                 android:layout_margin="30dp"
-                android:background="@drawable/rounded_rectangle"
+                android:background="@drawable/rounded_rectangle2"
                 android:src="@drawable/user"/>
 
             <LinearLayout

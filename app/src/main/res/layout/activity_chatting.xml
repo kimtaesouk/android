@@ -19,7 +19,7 @@
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rv_chat_list"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="bottom"
             android:background="#D9E5FF"
@@ -30,59 +30,133 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <ImageButton
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:src="@drawable/baseline_add_24"
-                android:layout_gravity="center"
-                android:background="@null" />
-
-            <RelativeLayout
-                android:layout_width="wrap_content"
+            android:orientation="vertical">
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center">
-
-                <EditText
-                    android:id="@+id/et_talk"
-                    android:layout_width="320dp"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:layout_marginStart="10dp"
-                    android:layout_marginTop="10dp"
-                    android:layout_marginEnd="10dp"
-                    android:layout_marginBottom="10dp"
-                    android:background="@drawable/board"
-                    android:gravity="top|start"
-                    android:inputType="textMultiLine"
-                    android:maxLines="5"
-                    android:minHeight="50dp"
-                    android:scrollbars="vertical"/>
-
+                android:orientation="horizontal">
 
                 <ImageButton
-                    android:id="@+id/ib_send_talk"
-                    android:layout_width="35dp"
-                    android:layout_height="35dp"
-                    android:layout_alignStart="@+id/et_talk"
-                    android:layout_alignEnd="@+id/et_talk"
-                    android:layout_alignBottom="@+id/et_talk"
-                    android:layout_marginStart="280dp"
-                    android:layout_marginEnd="5dp"
-                    android:layout_marginBottom="5dp"
-                    android:background="@drawable/round_background_yellow_circle"
-                    android:contentDescription="Clear text"
-                    android:padding="0dp"
-                    android:scaleType="fitCenter"
-                    android:src="@drawable/baseline_arrow_upward_24"
+                    android:id="@+id/ib_add_file"
+                    android:layout_width="50dp"
+                    android:layout_height="50dp"
+                    android:src="@drawable/baseline_add_24"
+                    android:layout_gravity="center"
+                    android:background="@null" />
+                <ImageButton
+                    android:id="@+id/ib_clear_file"
+                    android:layout_width="50dp"
+                    android:layout_height="50dp"
+                    android:src="@drawable/baseline_clear_24"
+                    android:layout_gravity="center"
+                    android:background="@null"
                     android:visibility="gone"/>
 
-            </RelativeLayout>
+                <RelativeLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center">
+
+                    <EditText
+                        android:id="@+id/et_talk"
+                        android:layout_width="320dp"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:layout_marginStart="10dp"
+                        android:layout_marginTop="10dp"
+                        android:layout_marginEnd="10dp"
+                        android:layout_marginBottom="10dp"
+                        android:background="@drawable/board"
+                        android:gravity="top|start"
+                        android:inputType="textMultiLine"
+                        android:maxLines="5"
+                        android:minHeight="35dp"
+                        android:scrollbars="vertical"/>
 
 
+                    <ImageButton
+                        android:id="@+id/ib_send_talk"
+                        android:layout_width="35dp"
+                        android:layout_height="35dp"
+                        android:layout_alignStart="@+id/et_talk"
+                        android:layout_alignEnd="@+id/et_talk"
+                        android:layout_alignBottom="@+id/et_talk"
+                        android:layout_marginStart="280dp"
+                        android:layout_marginEnd="5dp"
+                        android:layout_marginBottom="5dp"
+                        android:background="@drawable/round_background_yellow_circle"
+                        android:contentDescription="Clear text"
+                        android:padding="0dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/baseline_arrow_upward_24"
+                        android:visibility="gone"/>
+
+                </RelativeLayout>
+
+
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/ll_add_file"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_margin="15dp">
+                    <ImageButton
+                        android:id="@+id/ib_chat_album"
+                        android:layout_width="55dp"
+                        android:layout_height="55dp"
+                        android:src="@drawable/baseline_insert_photo_242"
+                        android:layout_gravity="center"
+                        android:background="@null"
+                        />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="앨범"
+                        android:textSize="22sp"
+                        android:layout_gravity="center"
+                        android:textStyle="bold"/>
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_margin="15dp">
+                    <ImageButton
+                        android:id="@+id/ib_chat_camara"
+                        android:layout_width="55dp"
+                        android:layout_height="55dp"
+                        android:src="@drawable/baseline_camera_alt_24"
+                        android:layout_gravity="center"
+                        android:background="@null"
+                        />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="카메라"
+                        android:textSize="22sp"
+                        android:layout_gravity="center"
+                        android:textStyle="bold"/>
+
+                </LinearLayout>
+
+            </LinearLayout>
 
         </LinearLayout>
+
 
     </LinearLayout>
 

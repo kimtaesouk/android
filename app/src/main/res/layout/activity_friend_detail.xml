@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".FriendDetail.FriendDetailActivity"
+    android:background="#A2ABB6"
     android:orientation="vertical">
 
     <LinearLayout
@@ -37,7 +38,7 @@
             android:background="@drawable/rounded_rectangle"
             android:src="@drawable/user"
             android:gravity="center"
-            android:layout_marginTop="350dp"/>
+            android:layout_marginTop="330dp"/>
 
         <TextView
             android:id="@+id/tv_friend_name"
@@ -50,38 +51,92 @@
             android:layout_margin="20dp"/>
     </LinearLayout>
 
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#FFFFFF"
+        android:layout_marginTop="30dp"/>
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center">
 
-        <ImageButton
-            android:id="@+id/ib_enter_chat"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
-            android:src="@drawable/baseline_chat_24"
-            android:gravity="center"
-            android:layout_margin="30dp"
-            android:background="@null"
-            />
-        <ImageButton
-            android:id="@+id/ib_enter_call"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
-            android:src="@drawable/baseline_call_24"
-            android:gravity="center"
-            android:background="@null"
-            />
-        <ImageButton
-            android:id="@+id/ib_enter_videocall"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
-            android:src="@drawable/baseline_videocam_24"
-            android:gravity="center"
-            android:layout_margin="30dp"
-            android:background="@null"
-            />
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_margin="15dp">
+            <ImageButton
+                android:id="@+id/ib_enter_chat"
+                android:layout_width="55dp"
+                android:layout_height="55dp"
+                android:src="@drawable/baseline_chat_24"
+                android:layout_gravity="center"
+                android:background="@null"
+                />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="1:1 채팅"
+                android:textSize="22sp"
+                android:layout_gravity="center"
+                android:textStyle="bold"/>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_margin="15dp">
+            <ImageButton
+                android:id="@+id/ib_enter_call"
+                android:layout_width="55dp"
+                android:layout_height="55dp"
+                android:src="@drawable/baseline_call_24"
+                android:layout_gravity="center"
+                android:background="@null"
+                />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="보이스 톡"
+                android:textSize="22sp"
+                android:layout_gravity="center"
+                android:textStyle="bold"/>
+
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_margin="15dp">
+            <ImageButton
+                android:id="@+id/ib_enter_videocall"
+                android:layout_width="55dp"
+                android:layout_height="55dp"
+                android:src="@drawable/baseline_videocam_24"
+                android:layout_gravity="center"
+                android:background="@null"
+                />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="보이스 톡"
+                android:textSize="22sp"
+                android:layout_gravity="center"
+                android:textStyle="bold"/>
+
+        </LinearLayout>
+
+
+
+
 
     </LinearLayout>
 

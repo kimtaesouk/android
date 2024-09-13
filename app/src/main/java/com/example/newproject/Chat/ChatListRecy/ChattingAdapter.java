@@ -1,15 +1,18 @@
 package com.example.newproject.Chat.ChatListRecy;
 
 import android.content.Context;
+import android.content.Intent;
 import android.icu.text.SimpleDateFormat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.newproject.Chat.DetailProfile_to_Chat;
 import com.example.newproject.R;
 
 import java.text.ParseException;
@@ -150,6 +153,17 @@ public class ChattingAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             }
 
             receivedHolder.tv_other_name.setText(chatting.sender_name);
+
+            receivedHolder.iv_profile.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Intent intent = new Intent(context , DetailProfile_to_Chat.class);
+                    intent.putExtra("mypid" , pid);
+                    intent.putExtra("friend_pid", chatting.sender_pid);
+
+                    context.startActivity(intent);
+                }
+            });
         }
     }
 
@@ -193,12 +207,15 @@ public class ChattingAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     public static class ReceivedViewHolder extends RecyclerView.ViewHolder {
         TextView tv_other_time, tv_other_msg, tv_other_name, tv_other_reder;
 
+        ImageView iv_profile;
+
         public ReceivedViewHolder(@NonNull View itemView) {
             super(itemView);
             tv_other_msg = itemView.findViewById(R.id.tv_other_msg);
             tv_other_time = itemView.findViewById(R.id.tv_other_time);
             tv_other_name = itemView.findViewById(R.id.tv_other_name);
             tv_other_reder = itemView.findViewById(R.id.tv_other_count);
+            iv_profile = itemView.findViewById(R.id.iv_profile);
 
         }
     }

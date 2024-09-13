@@ -1,27 +1,36 @@
 package com.example.newproject.Chat;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.Manifest;
 import android.app.ActivityManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.graphics.Rect;
 import android.icu.text.SimpleDateFormat;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewTreeObserver;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.newproject.Chat.ChatListRecy.Chatting;
 import com.example.newproject.Chat.ChatListRecy.ChattingAdapter;
@@ -58,8 +67,8 @@ public class ChattingActivity extends AppCompatActivity {
     TextView tv_friend_name;
     // 채팅 내용을 입력할 EditText
     EditText et_talk;
-    ImageButton ib_send_talk, ib_back, ib_room_option;
-    LinearLayout ll_friend_add_or_block, ll_block_clear, ll_block, ll_add_friend;
+    ImageButton ib_send_talk, ib_back, ib_room_option, ib_add_file, ib_clear_file, ib_chat_camara;
+    LinearLayout ll_friend_add_or_block, ll_block_clear, ll_block, ll_add_friend, ll_add_file;
     // 친구의 이름과 친구의 PID (개인 식별자)
     String friend_pid, my_pid, chattingroom_pid, roomname;
     RecyclerView rv_chat_list;
@@ -68,8 +77,10 @@ public class ChattingActivity extends AppCompatActivity {
     ArrayList<String> friend_pids = new ArrayList<>();
     HashMap<String, String> pidNameMap = new HashMap<>(); // PID를 키로 하고 이름을 값으로 하는 HashMap
     ArrayList<String> clientList = new ArrayList<>();
-    int reader, num = 0;
-    JSONObject names;
+    int reader = 0;
+    private int keyboardHeight = 0; // 키보드 높이를 저장할 변수
+    private static final int CAMERA_PERMISSION_REQUEST_CODE = 100;
+    private static final int CAMERA_INTENT_REQUEST_CODE = 101;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -85,6 +96,10 @@ public class ChattingActivity extends AppCompatActivity {
         ll_add_friend = findViewById(R.id.ll_add_friend);
         rv_chat_list = findViewById(R.id.rv_chat_list);
         ib_room_option = findViewById(R.id.ib_room_option);
+        ib_add_file = findViewById(R.id.ib_add_file);
+        ll_add_file = findViewById(R.id.ll_add_file);
+        ib_clear_file = findViewById(R.id.ib_clear_file);
+        ib_chat_camara = findViewById(R.id.ib_chat_camara);
 
         LinearLayoutManager layoutManager = new LinearLayoutManager(getApplicationContext());
         layoutManager.setStackFromEnd(true);  // RecyclerView를 항상 하단에 붙게 설정
@@ -130,6 +145,8 @@ public class ChattingActivity extends AppCompatActivity {
             // 새 채팅방에 접속 시 서비스 연결
             connectToSocketService();
         }
+
+
         ib_back.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -156,6 +173,38 @@ public class ChattingActivity extends AppCompatActivity {
                 }
             }
         });
+
+        ib_add_file.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (et_talk.hasFocus()) {
+                    et_talk.clearFocus();
+                    hideKeyboard();
+                }
+
+                // 애니메이션을 적용하여 부드럽게 레이아웃 크기 변경
+                ll_add_file.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        animateLayoutChange(); // 레이아웃 변경 애니메이션
+                    }
+                }, 300); // 키보드가 사라진 후 잠시 대기한 후 애니메이션 적용
+
+                ib_add_file.setVisibility(View.GONE);
+                ll_add_file.setVisibility(View.VISIBLE);
+                ib_clear_file.setVisibility(View.VISIBLE);
+            }
+        });
+
+
+        ib_clear_file.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ll_add_file.setVisibility(View.GONE);
+                ib_clear_file.setVisibility(View.GONE);
+                ib_add_file.setVisibility(View.VISIBLE);
+            }
+        });
         ib_room_option.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -163,12 +212,61 @@ public class ChattingActivity extends AppCompatActivity {
                 startActivity(intent1);
             }
         });
+
+        ib_chat_camara.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // 카메라 권한이 있는지 확인
+                if (ContextCompat.checkSelfPermission(ChattingActivity.this, Manifest.permission.CAMERA)
+                        != PackageManager.PERMISSION_GRANTED) {
+                    // 권한이 없으면 권한 요청
+                    ActivityCompat.requestPermissions(ChattingActivity.this,
+                            new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST_CODE);
+                } else {
+                    // 권한이 있으면 카메라로 이동
+                    openCamera();
+                }
+            }
+        });
         ArrayList<String> finalFriend_pids = friend_pids;
+        // 키보드가 나타날 때 레이아웃 크기 변화 감지
+        final View rootLayout = findViewById(R.id.ll_chat); // 최상위 레이아웃
+        rootLayout.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                Rect r = new Rect();
+                rootLayout.getWindowVisibleDisplayFrame(r);
+                int screenHeight = rootLayout.getRootView().getHeight();
+                int keypadHeight = screenHeight - r.bottom;
+
+                if (keypadHeight > screenHeight * 0.15) {
+                    // 키보드가 나타난 경우
+                    scrollToBottom();
+                }
+            }
+        });
+
+        // EditText에 포커스가 있을 때도 자동으로 최신 메시지로 스크롤
+
         // EditText에 TextWatcher를 추가하여 텍스트가 변경될 때마다 처리
+        et_talk.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View v, boolean hasFocus) {
+                if (hasFocus) {
+
+                    scrollToBottom();
+                    ll_add_file.setVisibility(View.GONE);
+                    ib_clear_file.setVisibility(View.GONE);
+
+                    ib_add_file.setVisibility(View.VISIBLE);
+                }
+            }
+        });
         et_talk.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
                 // 텍스트가 변경되기 전에 호출됨
+
             }
 
             @Override
@@ -218,10 +316,18 @@ public class ChattingActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
-
+    protected void onResume() {
+        super.onResume();
+        // 돌아왔을 때 데이터를 다시 가져오고 UI를 새로고침하는 로직을 추가합니다.
+        if (friend_pids.size() == 1 || chattingroom_pid == null) {
+            String friendPidsString = TextUtils.join(",", friend_pids);
+            getData(my_pid, friendPidsString); // 데이터를 다시 가져옴
+        } else {
+            tv_friend_name.setText(roomname);
+            setData4(chattingroom_pid, my_pid, () -> getData2(chattingroom_pid)); // 데이터를 새로고침
+        }
     }
+
 
     @Override
     protected void onStart() {
@@ -232,6 +338,61 @@ public class ChattingActivity extends AppCompatActivity {
 
         // 새 채팅방에 접속 시 서비스 연결
         connectToSocketService();
+    }
+
+    // 카메라 앱 실행 메서드
+    private void openCamera() {
+        Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        if (cameraIntent.resolveActivity(getPackageManager()) != null) {
+            startActivityForResult(cameraIntent, CAMERA_INTENT_REQUEST_CODE);
+        }
+    }
+
+    // 권한 요청 결과 처리
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // 권한이 허용되면 카메라 실행
+                openCamera();
+            } else {
+                // 권한이 거부되면 사용자에게 메시지 표시
+                Toast.makeText(this, "카메라 권한이 필요합니다.", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+    private void animateLayoutChange() {
+        ll_add_file.animate()
+                .translationY(0)  // 위로 올라오는 애니메이션
+                .alpha(1.0f)  // 투명도 적용 (페이드 인)
+                .setDuration(300)  // 300ms 동안 애니메이션 실행
+                .start();
+    }
+
+
+    // 키보드를 숨기는 메서드
+    private void hideKeyboard() {
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        View view = getCurrentFocus();
+        if (view != null) {
+            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        }
+    }
+
+    // 키보드 높이에 맞게 ll_add_file 레이아웃을 조정
+    private void adjustLayoutForKeyboard() {
+        if (keyboardHeight > 0) { // 키보드가 열려 있을 때만 조정
+            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) ll_add_file.getLayoutParams();
+            params.height = keyboardHeight; // 키보드 높이만큼 설정
+            ll_add_file.setLayoutParams(params);
+        }
+    }
+
+    private void scrollToBottom() {
+        if (chattingAdapter != null && chattingAdapter.getItemCount() > 0) {
+            rv_chat_list.scrollToPosition(chattingAdapter.getItemCount() - 1);
+        }
     }
     private boolean isMyServiceRunning(Class<?> serviceClass) {
         ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
