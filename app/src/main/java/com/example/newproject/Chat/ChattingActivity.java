@@ -77,10 +77,14 @@ public class ChattingActivity extends AppCompatActivity {
     ArrayList<String> friend_pids = new ArrayList<>();
     HashMap<String, String> pidNameMap = new HashMap<>(); // PID를 키로 하고 이름을 값으로 하는 HashMap
     ArrayList<String> clientList = new ArrayList<>();
+    private boolean isBlocked = false;  // 기본값은 차단되지 않은 상태로 설정
     int reader = 0;
     private int keyboardHeight = 0; // 키보드 높이를 저장할 변수
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 100;
     private static final int CAMERA_INTENT_REQUEST_CODE = 101;
+    private int currentPage = 1;  // 현재 페이지
+    private final int PAGE_SIZE = 25;  // 한 번에 로드할 항목의 개수
+    private boolean isLoading = false;  // 데이터 로드 중인지 여부
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -104,6 +108,19 @@ public class ChattingActivity extends AppCompatActivity {
         LinearLayoutManager layoutManager = new LinearLayoutManager(getApplicationContext());
         layoutManager.setStackFromEnd(true);  // RecyclerView를 항상 하단에 붙게 설정
         rv_chat_list.setLayoutManager(layoutManager);
+        rv_chat_list.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+
+                LinearLayoutManager layoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
+                if (layoutManager != null && layoutManager.findFirstVisibleItemPosition() == 0 && !isLoading) {
+                    isLoading = true;
+                    Log.d("ScrollListener", "Top reached, loading previous data...");
+                    getData2(chattingroom_pid);
+                }
+            }
+        });
 
         // 이전 액티비티에서 전달된 Intent를 받아옴
         Intent intent = getIntent();
@@ -111,9 +128,7 @@ public class ChattingActivity extends AppCompatActivity {
         my_pid = intent.getStringExtra("my_pid"); // 내 PID를 받아옴
         chattingroom_pid = intent.getStringExtra("room_pid");
         roomname = intent.getStringExtra("roomname");
-        System.out.println("chattinaActivity chattingroom_pid : " + chattingroom_pid );
         friend_pids = intent.getStringArrayListExtra("friend_pid");
-        System.out.println("chattinaActivity friend_pids수 : " + friend_pids.size());
         if(friend_pids.size() == 1 || chattingroom_pid == null){
             // friend_pids 리스트를 JSON 배열 형태의 문자열로 변환하여 전달
             JSONArray jsonArray = new JSONArray(friend_pids);
@@ -126,16 +141,9 @@ public class ChattingActivity extends AppCompatActivity {
         // BroadcastReceiver 등록
         IntentFilter filter = new IntentFilter("com.example.NewProject.NEW_MESSAGE");
         registerReceiver(messageReceiver, filter);
+        connectToSocketService();
 // SocketService 시작
-        Intent serviceIntent = new Intent(this, SocketService.class);
-        serviceIntent.putExtra("roompid", chattingroom_pid); // 방 ID
-        serviceIntent.putExtra("roomname", roomname);        // 방 이름
-        serviceIntent.putExtra("mypid", my_pid);             // 내 ID
-        serviceIntent.putExtra("message", "입장");           // 입장 메시지
-// 서비스가 실행 중이 아니면 시작
-        if (!isMyServiceRunning(SocketService.class)) {
-            startService(serviceIntent);
-        }
+        sendMessage(my_pid + "/" + chattingroom_pid + "/" + roomname + "/" + "입장");
         if(friend_pids.size() == 1 || chattingroom_pid == null){
             String friendPidsString = TextUtils.join(",", friend_pids);
             getData(my_pid, friendPidsString);
@@ -143,7 +151,6 @@ public class ChattingActivity extends AppCompatActivity {
             tv_friend_name.setText(roomname);
             setData4(chattingroom_pid, my_pid, () -> getData2(chattingroom_pid));
             // 새 채팅방에 접속 시 서비스 연결
-            connectToSocketService();
         }
 
 
@@ -329,6 +336,7 @@ public class ChattingActivity extends AppCompatActivity {
     }
 
 
+
     @Override
     protected void onStart() {
         super.onStart();
@@ -336,8 +344,17 @@ public class ChattingActivity extends AppCompatActivity {
         IntentFilter filter = new IntentFilter("com.example.NewProject.NEW_MESSAGE");
         registerReceiver(messageReceiver, filter);
 
-        // 새 채팅방에 접속 시 서비스 연결
-        connectToSocketService();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Intent serviceIntent = new Intent(this, SocketService.class);
+        serviceIntent.setAction("EXIT_ROOM");
+        serviceIntent.putExtra("roompid", chattingroom_pid); // 방 ID
+        serviceIntent.putExtra("roomname", roomname);        // 방 이름
+        serviceIntent.putExtra("mypid", my_pid);             // 내 ID
+        serviceIntent.putExtra("message", "퇴장");
     }
 
     // 카메라 앱 실행 메서드
@@ -427,13 +444,16 @@ public class ChattingActivity extends AppCompatActivity {
     private BroadcastReceiver messageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
+            if (isBlocked) {
+                // 친구가 차단된 상태라면 메시지를 받지 않음
+                Log.i("ChattingActivity", "메시지를 받지 않음 - 차단된 상태");
+                return;  // 메시지 처리를 중단
+            }
+
             String action = intent.getAction();
-            System.out.println("onReceive");
             if ("com.example.NewProject.NEW_MESSAGE".equals(action)) {
                 String msg = intent.getStringExtra("message").trim();
-                // 메시지를 RecyclerView에 추가하는 로직
-                System.out.println("BroadcastReceiver : " + msg);
-                addMessageToRecyclerView(msg);
+                addMessageToRecyclerView(msg);  // 차단 상태가 아니라면 메시지를 추가
             }
         }
     };
@@ -477,7 +497,7 @@ public class ChattingActivity extends AppCompatActivity {
                             }
 
                             // 어댑터 갱신 및 RecyclerView 새로고침
-                            chattingAdapter = new ChattingAdapter(chatList, getApplicationContext(), my_pid);
+                            chattingAdapter = new ChattingAdapter(chatList, getApplicationContext(), my_pid, chattingroom_pid);
                             rv_chat_list.setAdapter(chattingAdapter);
                             chattingAdapter.notifyDataSetChanged();
 
@@ -497,7 +517,7 @@ public class ChattingActivity extends AppCompatActivity {
                             chatList.add(chatMessage);
 
                             // 어댑터 갱신 및 RecyclerView에 메시지 추가
-                            chattingAdapter = new ChattingAdapter(chatList, getApplicationContext(), my_pid);
+                            chattingAdapter = new ChattingAdapter(chatList, getApplicationContext(), my_pid, chattingroom_pid);
                             rv_chat_list.setAdapter(chattingAdapter);
                             chattingAdapter.notifyItemInserted(chatList.size() - 1);
 
@@ -580,14 +600,17 @@ public class ChattingActivity extends AppCompatActivity {
 
                                 try {
                                     JSONObject jsonResponse = new JSONObject(responseData);
-                                    String success = jsonResponse.getString("success");
+                                    String status = jsonResponse.getString("success");
                                     roomname = jsonResponse.getString("roomname");
                                     chattingroom_pid = jsonResponse.getString("chatting_room_pid");
                                     System.out.println("getData 에서 받아온 chattingroom_pid : " + chattingroom_pid);
                                     tv_friend_name.setText(roomname);
                                     setData4(chattingroom_pid, my_pid, () -> getData2(chattingroom_pid));
 
-                                    if (success.equals("isBlock")){
+                                    System.out.println("서버에서 가져온 isBlodk : " + status );
+
+                                    if (status.equals("isBlock")){
+                                        isBlocked = true;  // 차단 상태를 true로 설정
                                         ll_friend_add_or_block.setVisibility(View.VISIBLE);
 
                                         ll_block_clear.setVisibility(View.VISIBLE);
@@ -601,10 +624,12 @@ public class ChattingActivity extends AppCompatActivity {
                                         et_talk.setEnabled(false); // et_talk를 비활성화 (회색으로 표시되고 클릭 불가)
                                         et_talk.setFocusable(false); // et_talk를 포커스 불가능하게 설정
                                         et_talk.setFocusableInTouchMode(false); // 터치로도 포커스할 수 없게 설정
-                                    } else if (success.equals("true")) {
+                                        ib_send_talk.setVisibility(View.GONE);
+                                    } else if (status.equals("true")) {
                                         runOnUiThread(new Runnable() {
                                             @Override
                                             public void run() {
+                                                isBlocked = false;  // 차단 상태를 true로 설정
                                                 ll_friend_add_or_block.setVisibility(View.GONE);
 
                                                 et_talk.setText("");
@@ -614,7 +639,8 @@ public class ChattingActivity extends AppCompatActivity {
                                             }
                                         });
                                     }
-                                    else if (success.equals("false")) {
+                                    else if (status.equals("false")) {
+                                        isBlocked = false;
                                         ll_friend_add_or_block.setVisibility(View.VISIBLE);
 
                                         ll_block_clear.setVisibility(View.GONE);
@@ -652,11 +678,25 @@ public class ChattingActivity extends AppCompatActivity {
     private void onUnblockClick(String f_pid) {
         // 차단 해제 버튼 클릭 시 실행될 코드
         setData2(friend_pids.get(0), my_pid, "unblock");
+        Intent serviceIntent = new Intent(this, SocketService.class);
+        serviceIntent.setAction("UnBlock");
+        serviceIntent.putExtra("roompid", chattingroom_pid); // 방 ID
+        serviceIntent.putExtra("roomname", roomname);        // 방 이름
+        serviceIntent.putExtra("mypid", my_pid);             // 내 ID
+        serviceIntent.putExtra("message", "UnBlock");
+        startService(serviceIntent);
     }
 
     private void onIsblockClick(String f_pid) {
         // 차단 버튼 클릭 시 실행될 코드
         setData2(friend_pids.get(0), my_pid, "isBlock");
+        Intent serviceIntent = new Intent(this, SocketService.class);
+        serviceIntent.setAction("IsBlock");
+        serviceIntent.putExtra("roompid", chattingroom_pid); // 방 ID
+        serviceIntent.putExtra("roomname", roomname);        // 방 이름
+        serviceIntent.putExtra("mypid", my_pid);             // 내 ID
+        serviceIntent.putExtra("message", "IsBlock");           // 입장 메시지
+        startService(serviceIntent);
     }
 
     private void sendMessage(String message) {
@@ -684,7 +724,7 @@ public class ChattingActivity extends AppCompatActivity {
             // 리스트에 메시지 추가
             chatList.add(chatMessage);
 
-            chattingAdapter = new ChattingAdapter(chatList, getApplicationContext(), my_pid);
+            chattingAdapter = new ChattingAdapter(chatList, getApplicationContext(), my_pid, chattingroom_pid);
             rv_chat_list.setAdapter(chattingAdapter);
 
             // 메시지를 리스트에 추가
@@ -862,6 +902,7 @@ public class ChattingActivity extends AppCompatActivity {
                 .add("my_pid", my_pid)
                 .add("friend_pids", friendPidsString)
                 .add("message", message)
+                .add("isBlocked" , String.valueOf(isBlocked))
                 .build();
 
         // 요청 만들기
@@ -918,40 +959,52 @@ public class ChattingActivity extends AppCompatActivity {
             Log.e("ChattingActivity", "네트워크 연결을 확인하세요.");
             return;
         }
+
         HttpUrl.Builder urlBuilder = HttpUrl.parse("http://49.247.32.169/NewProject/Get_chatlist.php").newBuilder();
         urlBuilder.addQueryParameter("v", "1.0");
         String url = urlBuilder.build().toString();
 
         RequestBody formBody = new FormBody.Builder()
+                .add("my_pid", my_pid)
                 .add("room_pid", room_pid)
+                .add("page", String.valueOf(currentPage))
+                .add("page_size", String.valueOf(PAGE_SIZE))
                 .build();
+
         OkHttpClient client = new OkHttpClient();
         Request request = new Request.Builder()
                 .url(url)
                 .post(formBody)
                 .build();
+
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 e.printStackTrace();
                 runOnUiThread(() -> Log.e("ChattingActivity", "네트워크 요청 실패"));
+                isLoading = false;
             }
+
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                // 네트워크 작업은 비동기적으로 처리하고 UI 업데이트는 runOnUiThread() 내에서 실행
                 final String responseData = response.body().string();
                 runOnUiThread(() -> {
                     try {
                         if (!response.isSuccessful()) {
                             Log.e("ChattingActivity", "응답 실패");
                         } else {
-                            Log.i("ChattingActivity", "응답 성공");
                             JSONObject jsonResponse = new JSONObject(responseData);
                             boolean success = jsonResponse.getBoolean("success");
+
                             if (success) {
                                 JSONArray roomsArray = jsonResponse.getJSONArray("rooms");
-                                // chatList 초기화 후 데이터 추가
-                                chatList.clear();
+
+                                if (currentPage == 1) {
+                                    chatList.clear();
+                                }
+
+                                int startIndex = chatList.size();
+
                                 for (int i = 0; i < roomsArray.length(); i++) {
                                     JSONObject roomObject = roomsArray.getJSONObject(i);
                                     String chatPid = roomObject.getString("pid");
@@ -962,27 +1015,29 @@ public class ChattingActivity extends AppCompatActivity {
                                     String createTime = roomObject.getString("create");
                                     int count = roomObject.getInt("count");
                                     int status = roomObject.getInt("status");
+
                                     chatList.add(new Chatting(chatPid, room_pid, sender_pid, sender_name, msg, count, createTime, status));
                                 }
-                                // 이름 매핑
+                                System.out.println(chatList.size());
+
                                 JSONObject namesObject = jsonResponse.getJSONObject("names");
                                 Iterator<String> keys = namesObject.keys();
                                 while (keys.hasNext()) {
                                     String key = keys.next();
                                     String name = namesObject.getString(key);
-                                    pidNameMap.put(key, name); // HashMap에 저장
+                                    pidNameMap.put(key, name);
                                 }
-                                // 어댑터 초기화 또는 갱신
+
                                 if (chattingAdapter == null) {
-                                    chattingAdapter = new ChattingAdapter(chatList, getApplicationContext(), my_pid);
+                                    chattingAdapter = new ChattingAdapter(chatList, getApplicationContext(), my_pid, chattingroom_pid);
                                     rv_chat_list.setAdapter(chattingAdapter);
                                 } else {
+                                    chattingAdapter.notifyItemRangeInserted(startIndex, roomsArray.length());
                                     chattingAdapter.notifyDataSetChanged();
                                 }
-                                // RecyclerView를 최신 메시지 위치로 스크롤
-                                rv_chat_list.post(() -> rv_chat_list.scrollToPosition(chatList.size() - 1));
-                                // 사용자 입장 메시지 전송
-                                sendMessage(my_pid + "/" + room_pid + "/" + roomname + "/" + "입장");
+
+                                isLoading = false;
+                                currentPage++;
                             } else {
                                 Log.e("ChattingActivity", "데이터 로드 실패");
                             }
@@ -995,6 +1050,9 @@ public class ChattingActivity extends AppCompatActivity {
             }
         });
     }
+
+
+
     private void setData4(String room_pid, String reader_pid, Runnable callback) {
         int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
         if (status == NetworkStatus.TYPE_NOT_CONNECTED) {

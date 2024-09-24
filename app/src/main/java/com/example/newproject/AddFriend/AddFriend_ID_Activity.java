@@ -17,7 +17,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.newproject.Chat.ChattingActivity;
-import com.example.newproject.FriendsListRecy.Friends;
+import com.example.newproject.Chat.Socket.SocketService;
 import com.example.newproject.R;
 import com.example.newproject.singup.NetworkStatus;
 
@@ -25,6 +25,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -133,7 +134,38 @@ public class AddFriend_ID_Activity extends AppCompatActivity {
         setData2(f_pid, pid, "isBlock");
     }
 
-    private void onTalkClick(String f_pid) {
+    private void handleAction(String friend_pid, String action, String room_pid) {
+        String state;
+        if ("delete".equals(action)) {
+            state = "delete";
+        } else if ("unblock".equals(action)) {
+            state = "unblock";
+            Intent serviceIntent = new Intent(this, SocketService.class);
+            serviceIntent.setAction("UnBlock");
+            serviceIntent.putExtra("roompid", room_pid); // 방 ID
+            serviceIntent.putExtra("mypid", pid);             // 내 ID
+            serviceIntent.putExtra("message", "UnBlock");           // 차단해제 메시지
+            startService(serviceIntent);
+        } else if ("block".equals(action)) {
+            state = "isBlock";
+            Intent serviceIntent = new Intent(this, SocketService.class);
+            serviceIntent.setAction("IsBlock");
+            serviceIntent.putExtra("roompid", room_pid); // 방 ID
+            serviceIntent.putExtra("mypid", pid);             // 내 ID
+            serviceIntent.putExtra("message", "IsBlock");           // 차단 메시지
+            startService(serviceIntent);
+        } else if ("return".equals(action)) {
+            state = "isReturn";
+        }else if ("hide".equals(action)) {
+            state = "isHide";
+        }  else {
+            return;
+        }
+
+        setData2(friend_pid, pid, state);
+    }
+
+    private void onTalkClick(ArrayList<String> f_pid) {
         // 1:1 대화 버튼 클릭 시 실행될 코드
         Intent intent = new Intent(getApplicationContext(), ChattingActivity.class);
         intent.putExtra("friend_pid", f_pid);
@@ -278,17 +310,21 @@ public class AddFriend_ID_Activity extends AppCompatActivity {
                                     String isfriendly = jsonResponse.getString("friend");
                                     String f_pid = jsonResponse.getString("f_pid");
                                     String f_name = jsonResponse.getString("name");
+                                    String room_pid = jsonResponse.getString("room_pid");
+
+                                    ArrayList<String> friend_pid = new ArrayList<>();
+                                    friend_pid.add(f_pid);
 
                                     if (success){
                                         tv_friend_name.setText(f_name);
                                         ll_friend_pf.setVisibility(View.VISIBLE);
                                         if(isfriendly.equals("isfrind")){
                                             btn_talk.setVisibility(View.VISIBLE);
-                                            btn_talk.setOnClickListener(v -> onTalkClick(f_pid));
+                                            btn_talk.setOnClickListener(v -> onTalkClick(friend_pid));
                                             btn_addfriends.setVisibility(View.GONE);
                                             tv_isregistered_fr.setVisibility(View.VISIBLE);
                                             btn_isblock.setVisibility(View.VISIBLE);
-                                            btn_isblock.setOnClickListener(v -> onIsblockClick(f_pid));
+                                            btn_isblock.setOnClickListener(v -> handleAction(f_pid, "block", room_pid));
                                             btn_unblock.setVisibility(View.GONE);
 
                                             tv_isnot.setVisibility(View.GONE);
@@ -306,7 +342,7 @@ public class AddFriend_ID_Activity extends AppCompatActivity {
                                                 tv_isnot.setVisibility(View.GONE);
                                             }else {
                                                 btn_isblock.setVisibility(View.VISIBLE);
-                                                btn_isblock.setOnClickListener(v -> onIsblockClick(f_pid));
+                                                btn_isblock.setOnClickListener(v -> handleAction(f_pid, "block", room_pid));
                                                 btn_unblock.setVisibility(View.GONE);
                                                 btn_talk.setVisibility(View.GONE);
                                                 btn_addfriends.setVisibility(View.VISIBLE);
@@ -326,9 +362,9 @@ public class AddFriend_ID_Activity extends AppCompatActivity {
                                         } else if (isfriendly.equals("isBlock")) {
                                             tv_isregistered_fr.setText("차단한 친구 입니다.");
                                             btn_unblock.setVisibility(View.VISIBLE);
+                                            btn_unblock.setOnClickListener(v -> handleAction(f_pid, "unblock", room_pid));
 
                                             btn_talk.setVisibility(View.GONE);
-                                            btn_unblock.setOnClickListener(v -> onUnblockClick(f_pid));
 
                                             btn_addfriends.setVisibility(View.GONE);
 

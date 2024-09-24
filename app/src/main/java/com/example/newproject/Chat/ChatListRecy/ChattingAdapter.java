@@ -26,7 +26,7 @@ public class ChattingAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     // 채팅 리스트 및 컨텍스트, 사용자 ID
     private List<Object> chatListWithDates; // 날짜가 포함된 새로운 리스트
     private Context context;
-    private String pid;
+    private String pid, roompid;
 
     // 뷰 타입 정의
     private static final int VIEW_TYPE_DATE = 0;
@@ -34,10 +34,11 @@ public class ChattingAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     private static final int VIEW_TYPE_RECEIVED = 2;
 
     // 생성자
-    public ChattingAdapter(List<Chatting> ChattingList, Context context, String pid) {
+    public ChattingAdapter(List<Chatting> ChattingList, Context context, String pid, String roompid) {
         this.context = context;
         this.pid = pid;
         this.chatListWithDates = generateChatListWithDates(ChattingList); // 날짜가 포함된 리스트 생성
+        this.roompid = roompid;
     }
 
     // 날짜가 포함된 새로운 리스트를 생성하는 메서드
@@ -160,6 +161,7 @@ public class ChattingAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                     Intent intent = new Intent(context , DetailProfile_to_Chat.class);
                     intent.putExtra("mypid" , pid);
                     intent.putExtra("friend_pid", chatting.sender_pid);
+                    intent.putExtra("roompid", roompid);
 
                     context.startActivity(intent);
                 }

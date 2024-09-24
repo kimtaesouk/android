@@ -14,6 +14,7 @@ import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.newproject.Chat.Socket.SocketService;
 import com.example.newproject.R;
 import com.example.newproject.singup.NetworkStatus;
 
@@ -34,7 +35,7 @@ import okhttp3.Response;
 public class DetailProfile_to_Chat extends AppCompatActivity {
     TextView tv_friend_name;
     ImageButton ib_back, ib_enter_add, ib_enter_block, ib_option, ib_enter_notblock;
-    String mypid, friend_pid;
+    String mypid, friend_pid, roompid;
     String status; // status를 클래스 필드로 선언
 
     LinearLayout ll_notblock , ll_isblock, ll_add_friend, ll_video_talk, ll_voice_talk;
@@ -59,6 +60,7 @@ public class DetailProfile_to_Chat extends AppCompatActivity {
         Intent intent = getIntent();
         mypid = intent.getStringExtra("mypid");
         friend_pid = intent.getStringExtra("friend_pid");
+        roompid = intent.getStringExtra("roompid");
 
         getData(mypid, friend_pid); // 서버로부터 데이터를 가져옴
 
@@ -115,8 +117,20 @@ public class DetailProfile_to_Chat extends AppCompatActivity {
             state = "delete";
         } else if ("unblock".equals(action)) {
             state = "unblock";
+            Intent serviceIntent = new Intent(this, SocketService.class);
+            serviceIntent.setAction("UnBlock");
+            serviceIntent.putExtra("roompid", roompid); // 방 ID
+            serviceIntent.putExtra("mypid", mypid);             // 내 ID
+            serviceIntent.putExtra("message", "UnBlock");           // 차단해제 메시지
+            startService(serviceIntent);
         } else if ("block".equals(action)) {
             state = "isBlock";
+            Intent serviceIntent = new Intent(this, SocketService.class);
+            serviceIntent.setAction("IsBlock");
+            serviceIntent.putExtra("roompid", roompid); // 방 ID
+            serviceIntent.putExtra("mypid", mypid);             // 내 ID
+            serviceIntent.putExtra("message", "IsBlock");           // 차단 메시지
+            startService(serviceIntent);
         } else if ("return".equals(action)) {
             state = "isReturn";
         }else if ("hide".equals(action)) {
