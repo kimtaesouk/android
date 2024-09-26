@@ -7,11 +7,15 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.resource.bitmap.RoundedCorners;
 import com.example.newproject.Chat.DetailProfile_to_Chat;
 import com.example.newproject.R;
 
@@ -104,76 +108,106 @@ public class ChattingAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         // 내가 보낸 메시지를 표시하는 아이템인 경우
         else if (viewType == VIEW_TYPE_SENT) {
             SentViewHolder sentHolder = (SentViewHolder) holder;
-            Chatting chatting = (Chatting) chatListWithDates.get(position);
-            sentHolder.tv_sent_msg.setText(chatting.msg);
-            if (chatting.count <= 0) {
-                // count가 0일 때 TextView를 숨김
-                sentHolder.tv_sent_count.setText(" ");
-            } else {
-                // count가 0이 아닐 때 TextView를 보여주고 값을 설정
-                sentHolder.tv_sent_count.setText(String.valueOf(chatting.count));
-            }
 
-            String dateTimeString = chatting.create;
-            SimpleDateFormat originalFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.KOREA);
-            SimpleDateFormat targetFormat = new SimpleDateFormat("a hh:mm", Locale.KOREA);
+            if (chatListWithDates.get(position) instanceof Chatting) {
+                Chatting chatting = (Chatting) chatListWithDates.get(position);
 
-            try {
-                Date date = originalFormat.parse(dateTimeString);
-                String formattedTime = targetFormat.format(date);
-                sentHolder.tv_sent_time.setText(formattedTime);
-            } catch (ParseException e) {
-                e.printStackTrace();
-                sentHolder.tv_sent_time.setText("");
+                // 이미지 메시지 처리
+                if (chatting.getImagePath() != null && !chatting.getImagePath().equals("null")) {
+                    sentHolder.cv_sent_image.setVisibility(View.VISIBLE);
+                    sentHolder.ll_sent_msg.setVisibility(View.GONE);
+                    sentHolder.iv_sent_image.setVisibility(View.VISIBLE); // 이미지가 있을 때만 보임
+                    sentHolder.tv_sent_msg.setVisibility(View.GONE); // 이미지가 있을 경우 텍스트 숨김
+                    Glide.with(context).load(chatting.getImagePath()).into(sentHolder.iv_sent_image);
+                } else {
+                    sentHolder.cv_sent_image.setVisibility(View.GONE);
+                    sentHolder.ll_sent_msg.setVisibility(View.VISIBLE);
+                    sentHolder.iv_sent_image.setVisibility(View.GONE); // 이미지가 없을 때는 감춤
+                    sentHolder.tv_sent_msg.setVisibility(View.VISIBLE); // 이미지가 없을 경우 텍스트 표시
+                    sentHolder.tv_sent_msg.setText(chatting.msg);
+                }
+
+                // 메시지 리더 카운트
+                if (chatting.count <= 0) {
+                    sentHolder.tv_sent_count.setText(" ");
+                } else {
+                    sentHolder.tv_sent_count.setText(String.valueOf(chatting.count));
+                }
+
+                // 시간 표시
+                String dateTimeString = chatting.create;
+                SimpleDateFormat originalFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.KOREA);
+                SimpleDateFormat targetFormat = new SimpleDateFormat("a hh:mm", Locale.KOREA);
+                try {
+                    Date date = originalFormat.parse(dateTimeString);
+                    String formattedTime = targetFormat.format(date);
+                    sentHolder.tv_sent_time.setText(formattedTime);
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                    sentHolder.tv_sent_time.setText("");
+                }
             }
         }
         // 다른 사람이 보낸 메시지를 표시하는 아이템인 경우
-        else {
+        else if (viewType == VIEW_TYPE_RECEIVED) {
             ReceivedViewHolder receivedHolder = (ReceivedViewHolder) holder;
-            Chatting chatting = (Chatting) chatListWithDates.get(position);
-            receivedHolder.tv_other_msg.setText(chatting.msg);
-            if (chatting.count <= 0) {
-                // count가 0일 때 TextView를 숨김
-                receivedHolder.tv_other_reder.setText(" ");
-            } else {
-                // count가 0이 아닐 때 TextView를 보여주고 값을 설정
-                receivedHolder.tv_other_reder.setText(String.valueOf(chatting.count));
-            }
 
-            String dateTimeString = chatting.create;
-            SimpleDateFormat originalFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            SimpleDateFormat targetFormat = new SimpleDateFormat("a hh:mm");
+            if (chatListWithDates.get(position) instanceof Chatting) {
+                Chatting chatting = (Chatting) chatListWithDates.get(position);
 
-            try {
-                Date date = originalFormat.parse(dateTimeString);
-                String formattedTime = targetFormat.format(date);
-                receivedHolder.tv_other_time.setText(formattedTime);
-            } catch (ParseException e) {
-                e.printStackTrace();
-                receivedHolder.tv_other_time.setText("");
-            }
+                // 이미지 메시지 처리
+                if (chatting.getImagePath() != null && !chatting.getImagePath().equals("null")) {
+                    receivedHolder.cv_other_image.setVisibility(View.VISIBLE);
+                    receivedHolder.ll_other_msg.setVisibility(View.GONE);
+                    receivedHolder.iv_other_image.setVisibility(View.VISIBLE); // 이미지가 있을 때만 보임
+                    receivedHolder.tv_other_msg.setVisibility(View.GONE); // 이미지가 있을 경우 텍스트 숨김
+                    Glide.with(context).load(chatting.getImagePath()).into(receivedHolder.iv_other_image);
+                } else  {
+                    receivedHolder.cv_other_image.setVisibility(View.GONE);
+                    receivedHolder.ll_other_msg.setVisibility(View.VISIBLE);
+                    receivedHolder.iv_other_image.setVisibility(View.GONE); // 이미지가 없을 때는 감춤
+                    receivedHolder.tv_other_msg.setVisibility(View.VISIBLE); // 이미지가 없을 경우 텍스트 표시
+                    receivedHolder.tv_other_msg.setText(chatting.msg);
+                }
 
-            receivedHolder.tv_other_name.setText(chatting.sender_name);
+                // 메시지 리더 카운트
+                if (chatting.count <= 0) {
+                    receivedHolder.tv_other_reder.setText(" ");
+                } else {
+                    receivedHolder.tv_other_reder.setText(String.valueOf(chatting.count));
+                }
 
-            receivedHolder.iv_profile.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Intent intent = new Intent(context , DetailProfile_to_Chat.class);
-                    intent.putExtra("mypid" , pid);
+                // 시간 표시
+                String dateTimeString = chatting.create;
+                SimpleDateFormat originalFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                SimpleDateFormat targetFormat = new SimpleDateFormat("a hh:mm");
+                try {
+                    Date date = originalFormat.parse(dateTimeString);
+                    String formattedTime = targetFormat.format(date);
+                    receivedHolder.tv_other_time.setText(formattedTime);
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                    receivedHolder.tv_other_time.setText("");
+                }
+
+                // 사용자 이름
+                receivedHolder.tv_other_name.setText(chatting.sender_name);
+
+                // 프로필 이미지 클릭 시 프로필 상세로 이동
+                receivedHolder.iv_profile.setOnClickListener(v -> {
+                    Intent intent = new Intent(context, DetailProfile_to_Chat.class);
+                    intent.putExtra("mypid", pid);
                     intent.putExtra("friend_pid", chatting.sender_pid);
                     intent.putExtra("roompid", roompid);
-
                     context.startActivity(intent);
-                }
-            });
+                });
+            }
         }
     }
-
     // 날짜 포맷팅 메서드
     private String formatDate(String dateStr) {
         SimpleDateFormat originalFormat = new SimpleDateFormat("yyyy-MM-dd");
         SimpleDateFormat targetFormat = new SimpleDateFormat("yyyy년 MM월 dd일 E요일", Locale.KOREAN);
-
         try {
             Date date = originalFormat.parse(dateStr);
             return targetFormat.format(date);
@@ -196,20 +230,29 @@ public class ChattingAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     // 내가 보낸 메시지를 표시하는 ViewHolder 클래스
     public static class SentViewHolder extends RecyclerView.ViewHolder {
         TextView tv_sent_msg, tv_sent_time, tv_sent_count;
+        ImageView iv_sent_image;  // 이미지 추가
+        LinearLayout ll_sent_msg;
+
+        CardView cv_sent_image;
 
         public SentViewHolder(@NonNull View itemView) {
             super(itemView);
             tv_sent_msg = itemView.findViewById(R.id.tv_sent_msg);
             tv_sent_time = itemView.findViewById(R.id.tv_sent_time);
             tv_sent_count = itemView.findViewById(R.id.tv_sent_count);
+            iv_sent_image = itemView.findViewById(R.id.iv_sent_image);  // 이미지뷰 추가
+            ll_sent_msg = itemView.findViewById(R.id.ll_sent_msg);
+            cv_sent_image = itemView.findViewById(R.id.cv_sent_image);
+
         }
     }
 
     // 다른 사람이 보낸 메시지를 표시하는 ViewHolder 클래스
     public static class ReceivedViewHolder extends RecyclerView.ViewHolder {
         TextView tv_other_time, tv_other_msg, tv_other_name, tv_other_reder;
-
-        ImageView iv_profile;
+        ImageView iv_profile, iv_other_image;  // 이미지 추가
+        LinearLayout ll_other_msg;
+        CardView cv_other_image;
 
         public ReceivedViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -218,7 +261,10 @@ public class ChattingAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             tv_other_name = itemView.findViewById(R.id.tv_other_name);
             tv_other_reder = itemView.findViewById(R.id.tv_other_count);
             iv_profile = itemView.findViewById(R.id.iv_profile);
-
+            iv_other_image = itemView.findViewById(R.id.iv_other_image);  // 이미지뷰 추가
+            ll_other_msg = itemView.findViewById(R.id.ll_other_msg);
+            cv_other_image = itemView.findViewById(R.id.cv_other_image);
         }
     }
 }
+

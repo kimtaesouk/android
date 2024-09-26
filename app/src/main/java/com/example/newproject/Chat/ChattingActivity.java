@@ -14,6 +14,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Rect;
 import android.icu.text.SimpleDateFormat;
 import android.os.Build;
@@ -22,6 +24,7 @@ import android.provider.MediaStore;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewTreeObserver;
@@ -43,6 +46,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -58,15 +64,14 @@ import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.FormBody;
 import okhttp3.HttpUrl;
+import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 public class ChattingActivity extends AppCompatActivity {
-    // 친구의 이름을 표시할 TextView
-    TextView tv_friend_name;
-    // 채팅 내용을 입력할 EditText
-    EditText et_talk;
+    TextView tv_friend_name; // 친구의 이름을 표시할 TextView
+    EditText et_talk; // 채팅 내용을 입력할 EditText
     ImageButton ib_send_talk, ib_back, ib_room_option, ib_add_file, ib_clear_file, ib_chat_camara;
     LinearLayout ll_friend_add_or_block, ll_block_clear, ll_block, ll_add_friend, ll_add_file;
     // 친구의 이름과 친구의 PID (개인 식별자)
@@ -85,14 +90,17 @@ public class ChattingActivity extends AppCompatActivity {
     private int currentPage = 1;  // 현재 페이지
     private final int PAGE_SIZE = 25;  // 한 번에 로드할 항목의 개수
     private boolean isLoading = false;  // 데이터 로드 중인지 여부
+    private boolean isFirstLoad = true;
+    private Bitmap capturedImage = null;  // 카메라로 찍은 이미지를 저장하는 변수
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chatting);
+
         // XML 레이아웃에서 UI 요소를 연결
-        tv_friend_name = findViewById(R.id.tv_friend_name); // 친구의 이름을 표시하는 TextView
-        et_talk = findViewById(R.id.et_talk);               // 채팅 메시지를 입력하는 EditText
-        ib_send_talk = findViewById(R.id.ib_send_talk);// 채팅 입력후 전송 버튼 et_talk 작성 시작하면 보이게
+        tv_friend_name = findViewById(R.id.tv_friend_name);
+        et_talk = findViewById(R.id.et_talk);
+        ib_send_talk = findViewById(R.id.ib_send_talk);
         ll_friend_add_or_block = findViewById(R.id.ll_friend_add_or_block);
         ll_block_clear = findViewById(R.id.ll_block_clear);
         ll_block = findViewById(R.id.ll_block);
@@ -106,31 +114,28 @@ public class ChattingActivity extends AppCompatActivity {
         ib_chat_camara = findViewById(R.id.ib_chat_camara);
 
         LinearLayoutManager layoutManager = new LinearLayoutManager(getApplicationContext());
-        layoutManager.setStackFromEnd(true);  // RecyclerView를 항상 하단에 붙게 설정
+        layoutManager.setStackFromEnd(true);
         rv_chat_list.setLayoutManager(layoutManager);
         rv_chat_list.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);
 
-                LinearLayoutManager layoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
-                if (layoutManager != null && layoutManager.findFirstVisibleItemPosition() == 0 && !isLoading) {
+                LinearLayoutManager layoutManager = (LinearLayoutManager) rv_chat_list.getLayoutManager();
+                if (layoutManager != null && layoutManager.findFirstVisibleItemPosition() == 0 && dy < 0 && !isLoading) {
                     isLoading = true;
-                    Log.d("ScrollListener", "Top reached, loading previous data...");
                     getData2(chattingroom_pid);
                 }
             }
         });
-
         // 이전 액티비티에서 전달된 Intent를 받아옴
         Intent intent = getIntent();
-        // 먼저 배열 형태로 데이터를 시도
-        my_pid = intent.getStringExtra("my_pid"); // 내 PID를 받아옴
+        my_pid = intent.getStringExtra("my_pid");
         chattingroom_pid = intent.getStringExtra("room_pid");
         roomname = intent.getStringExtra("roomname");
         friend_pids = intent.getStringArrayListExtra("friend_pid");
-        if(friend_pids.size() == 1 || chattingroom_pid == null){
-            // friend_pids 리스트를 JSON 배열 형태의 문자열로 변환하여 전달
+
+        if (friend_pids.size() == 1 || chattingroom_pid == null) {
             JSONArray jsonArray = new JSONArray(friend_pids);
             String friendPidsString = jsonArray.toString();
             getData(my_pid, friendPidsString);
@@ -138,201 +143,98 @@ public class ChattingActivity extends AppCompatActivity {
             tv_friend_name.setText(roomname);
             setData4(chattingroom_pid, my_pid, () -> getData2(chattingroom_pid));
         }
-        // BroadcastReceiver 등록
+
         IntentFilter filter = new IntentFilter("com.example.NewProject.NEW_MESSAGE");
         registerReceiver(messageReceiver, filter);
         connectToSocketService();
-// SocketService 시작
-        sendMessage(my_pid + "/" + chattingroom_pid + "/" + roomname + "/" + "입장");
-        if(friend_pids.size() == 1 || chattingroom_pid == null){
-            String friendPidsString = TextUtils.join(",", friend_pids);
-            getData(my_pid, friendPidsString);
-        } else {
-            tv_friend_name.setText(roomname);
-            setData4(chattingroom_pid, my_pid, () -> getData2(chattingroom_pid));
-            // 새 채팅방에 접속 시 서비스 연결
-        }
+        sendMessage(my_pid + "|" + chattingroom_pid + "|" + roomname + "|" + "입장");
 
-
-        ib_back.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent resultIntent = new Intent(ChattingActivity.this, Main_Activity.class);
-                resultIntent.putExtra("openFragment", "ChatFragment"); // ChatFragment를 표시할 것임을 명시
-                resultIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                // ChattingActivity에서 Main_Activity로 돌아오기 전에
-                SharedPreferences prefs = getSharedPreferences("fragmentPrefs", MODE_PRIVATE);
-                SharedPreferences.Editor editor = prefs.edit();
-                editor.putBoolean("shouldOpenChatFragment", true);
-                editor.apply();
-                startActivity(resultIntent);
-                try {
-                    // 메시지 전송
-                    sendMessage(my_pid + "/" + chattingroom_pid + "/" + roomname + "/" + "퇴장");
-                    // BroadcastReceiver 해제
-                    unregisterReceiver(messageReceiver);
-                    setData4(chattingroom_pid, my_pid, () -> {
-                        // setData4 완료 후 Activity 종료
-                        finish();
-                    });
-                } catch (IllegalArgumentException e) {
-                    Log.e("ChattingActivity", "Receiver not registered", e);
-                }
+        ib_back.setOnClickListener(v -> {
+            Intent resultIntent = new Intent(ChattingActivity.this, Main_Activity.class);
+            resultIntent.putExtra("openFragment", "ChatFragment");
+            resultIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            SharedPreferences prefs = getSharedPreferences("fragmentPrefs", MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putBoolean("shouldOpenChatFragment", true);
+            editor.apply();
+            startActivity(resultIntent);
+            try {
+                sendMessage(my_pid + "|" + chattingroom_pid + "|" + roomname + "|" + "퇴장");
+                unregisterReceiver(messageReceiver);
+                setData4(chattingroom_pid, my_pid, () -> finish());
+            } catch (IllegalArgumentException e) {
+                Log.e("ChattingActivity", "Receiver not registered", e);
             }
         });
 
-        ib_add_file.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (et_talk.hasFocus()) {
-                    et_talk.clearFocus();
-                    hideKeyboard();
-                }
+        ib_add_file.setOnClickListener(v -> {
+            if (et_talk.hasFocus()) {
+                et_talk.clearFocus();
+                hideKeyboard();
+            }
+            ll_add_file.postDelayed(this::animateLayoutChange, 300);
+            ib_add_file.setVisibility(View.GONE);
+            ll_add_file.setVisibility(View.VISIBLE);
+            ib_clear_file.setVisibility(View.VISIBLE);
+        });
 
-                // 애니메이션을 적용하여 부드럽게 레이아웃 크기 변경
-                ll_add_file.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        animateLayoutChange(); // 레이아웃 변경 애니메이션
-                    }
-                }, 300); // 키보드가 사라진 후 잠시 대기한 후 애니메이션 적용
+        ib_clear_file.setOnClickListener(v -> {
+            ll_add_file.setVisibility(View.GONE);
+            ib_clear_file.setVisibility(View.GONE);
+            ib_add_file.setVisibility(View.VISIBLE);
+        });
 
-                ib_add_file.setVisibility(View.GONE);
-                ll_add_file.setVisibility(View.VISIBLE);
-                ib_clear_file.setVisibility(View.VISIBLE);
+        ib_chat_camara.setOnClickListener(v -> {
+            if (ContextCompat.checkSelfPermission(ChattingActivity.this, Manifest.permission.CAMERA)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(ChattingActivity.this,
+                        new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST_CODE);
+            } else {
+                openCamera();
             }
         });
 
-
-        ib_clear_file.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+        et_talk.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                scrollToBottom();
                 ll_add_file.setVisibility(View.GONE);
                 ib_clear_file.setVisibility(View.GONE);
                 ib_add_file.setVisibility(View.VISIBLE);
             }
         });
-        ib_room_option.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent1 = new Intent(getApplicationContext() , ChattingOptionActivity.class);
-                startActivity(intent1);
-            }
-        });
 
-        ib_chat_camara.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // 카메라 권한이 있는지 확인
-                if (ContextCompat.checkSelfPermission(ChattingActivity.this, Manifest.permission.CAMERA)
-                        != PackageManager.PERMISSION_GRANTED) {
-                    // 권한이 없으면 권한 요청
-                    ActivityCompat.requestPermissions(ChattingActivity.this,
-                            new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST_CODE);
-                } else {
-                    // 권한이 있으면 카메라로 이동
-                    openCamera();
-                }
-            }
-        });
-        ArrayList<String> finalFriend_pids = friend_pids;
-        // 키보드가 나타날 때 레이아웃 크기 변화 감지
-        final View rootLayout = findViewById(R.id.ll_chat); // 최상위 레이아웃
-        rootLayout.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
-            @Override
-            public void onGlobalLayout() {
-                Rect r = new Rect();
-                rootLayout.getWindowVisibleDisplayFrame(r);
-                int screenHeight = rootLayout.getRootView().getHeight();
-                int keypadHeight = screenHeight - r.bottom;
-
-                if (keypadHeight > screenHeight * 0.15) {
-                    // 키보드가 나타난 경우
-                    scrollToBottom();
-                }
-            }
-        });
-
-        // EditText에 포커스가 있을 때도 자동으로 최신 메시지로 스크롤
-
-        // EditText에 TextWatcher를 추가하여 텍스트가 변경될 때마다 처리
-        et_talk.setOnFocusChangeListener(new View.OnFocusChangeListener() {
-            @Override
-            public void onFocusChange(View v, boolean hasFocus) {
-                if (hasFocus) {
-
-                    scrollToBottom();
-                    ll_add_file.setVisibility(View.GONE);
-                    ib_clear_file.setVisibility(View.GONE);
-
-                    ib_add_file.setVisibility(View.VISIBLE);
-                }
-            }
-        });
         et_talk.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                // 텍스트가 변경되기 전에 호출됨
-
-            }
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                // 텍스트가 변경되는 중에 호출됨
-                if(et_talk.getText().toString().isEmpty()){
-                    // et_talk이 비면 ib_send_talk다시 안보이게
+                if (et_talk.getText().toString().isEmpty()) {
                     ib_send_talk.setVisibility(View.GONE);
-                }else if(!et_talk.getText().toString().isEmpty()){
-                    // et_talk이 입력되면 버튼 보이게
+                } else {
                     ib_send_talk.setVisibility(View.VISIBLE);
-                    ib_send_talk.setOnClickListener(v -> onSendTalk(et_talk.getText().toString(), my_pid, finalFriend_pids));
+                    ib_send_talk.setOnClickListener(v -> onSendTalk(et_talk.getText().toString(), my_pid, friend_pids));
                 }
             }
 
             @Override
-            public void afterTextChanged(Editable s) {
-                // 텍스트가 변경된 후에 호출됨
-                int maxWidth = 275; // 텍스트가 표시될 최대 너비를 275dp로 설정
-                // dp 단위를 실제 픽셀 값으로 변환
-                int editTextWidth = (int) (maxWidth * getResources().getDisplayMetrics().density);
-
-                String text = s.toString(); // 현재 입력된 텍스트를 문자열로 변환
-                String[] lines = text.split("\n"); // 텍스트를 줄바꿈 기준으로 나눔
-                StringBuilder newText = new StringBuilder(); // 새로운 텍스트를 구성할 StringBuilder
-
-                // 각 줄에 대해 텍스트가 최대 너비를 초과하는지 확인
-                for (String line : lines) {
-                    while (et_talk.getPaint().measureText(line) > editTextWidth) {
-                        // 텍스트가 최대 너비를 초과하면 줄을 분할
-                        int breakIndex = et_talk.getPaint().breakText(line, true, editTextWidth, null);
-                        newText.append(line.substring(0, breakIndex)).append("\n"); // 줄바꿈을 추가하여 새 텍스트 구성
-                        line = line.substring(breakIndex); // 남은 텍스트로 줄을 다시 설정
-                    }
-                    newText.append(line).append("\n"); // 마지막 줄 추가
-                }
-
-                // 텍스트가 변경되었을 경우 EditText를 업데이트
-                if (!newText.toString().equals(text)) {
-                    et_talk.removeTextChangedListener(this); // 무한 루프를 방지하기 위해 리스너 제거
-                    et_talk.setText(newText.toString().trim()); // 새로운 텍스트로 설정
-                    et_talk.setSelection(et_talk.getText().length()); // 커서를 텍스트의 끝으로 이동
-                    et_talk.addTextChangedListener(this); // 리스너 다시 추가
-                }
-            }
+            public void afterTextChanged(Editable s) {}
         });
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        // 돌아왔을 때 데이터를 다시 가져오고 UI를 새로고침하는 로직을 추가합니다.
-        if (friend_pids.size() == 1 || chattingroom_pid == null) {
-            String friendPidsString = TextUtils.join(",", friend_pids);
-            getData(my_pid, friendPidsString); // 데이터를 다시 가져옴
-        } else {
-            tv_friend_name.setText(roomname);
-            setData4(chattingroom_pid, my_pid, () -> getData2(chattingroom_pid)); // 데이터를 새로고침
-        }
+        // Activity가 다시 활성화될 때 불필요하게 setData4를 호출하지 않도록 수정
+            // 중복 호출 방지 로직 추가
+            if (!isLoading) {
+                if (friend_pids.size() == 1 || chattingroom_pid == null) {
+                    String friendPidsString = TextUtils.join(",", friend_pids);
+                } else {
+                    tv_friend_name.setText(roomname);
+//                    setData4(chattingroom_pid, my_pid, () -> getData2(chattingroom_pid));
+                }
+            }
     }
 
 
@@ -357,12 +259,149 @@ public class ChattingActivity extends AppCompatActivity {
         serviceIntent.putExtra("message", "퇴장");
     }
 
-    // 카메라 앱 실행 메서드
     private void openCamera() {
         Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         if (cameraIntent.resolveActivity(getPackageManager()) != null) {
             startActivityForResult(cameraIntent, CAMERA_INTENT_REQUEST_CODE);
         }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == CAMERA_INTENT_REQUEST_CODE && resultCode == RESULT_OK) {
+            Bundle extras = data.getExtras();
+            capturedImage = (Bitmap) extras.get("data");
+            sendChatMessageWithImage(et_talk.getText().toString(), capturedImage);
+        }
+    }
+
+    private void sendChatMessageWithImage(String message, Bitmap imageBitmap) {
+        File imageFile = null;
+        String encodedImage = null;
+
+        if (imageBitmap != null) {
+            // 이미지를 Base64로 인코딩합니다.
+            encodedImage = encodeImageToBase64(imageBitmap);
+
+            // 이미지 파일을 생성합니다.
+            imageFile = saveImageToFile(imageBitmap);
+
+            // 리사이클러뷰에 이미지를 바로 추가합니다.
+            addImageToRecyclerView(imageBitmap, imageFile);
+        }
+
+        // 메시지와 이미지를 서버로 전송합니다.
+        uploadMessageAndImageToServer("[사진]", imageFile);
+
+        // Base64로 인코딩한 이미지를 포함한 메시지를 서버로 전송합니다.
+        sendMessage(my_pid + "|" + chattingroom_pid + "|" + roomname + "|" + encodedImage);
+
+        // 메시지가 있을 경우 추가로 처리합니다.
+        if (!message.isEmpty()) {
+            onSendTalk(message, my_pid, friend_pids); // 메시지 추가
+        }
+    }
+    private String encodeImageToBase64(Bitmap imageBitmap) {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        imageBitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
+        byte[] imageBytes = byteArrayOutputStream.toByteArray();
+        // Base64로 인코딩
+        return Base64.encodeToString(imageBytes, Base64.DEFAULT);
+    }
+    private Bitmap decodeBase64ToBitmap(String base64String) {
+        try {
+            // Base64 문자열에서 줄바꿈이나 공백 제거
+            base64String = base64String.replace("\n", "").replace("\r", "");
+
+            // Base64로부터 바이트 배열을 디코딩
+            byte[] decodedBytes = Base64.decode(base64String, Base64.DEFAULT);
+
+            // 바이트 배열을 비트맵으로 변환
+            return BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
+        } catch (IllegalArgumentException e) {
+            Log.e("ChattingActivity", "Base64 decoding failed", e);
+            return null;
+        }
+    }
+
+    // 리사이클러뷰에 이미지와 함께 데이터를 추가하는 메서드
+    private void addImageToRecyclerView(Bitmap imageBitmap, File imageFile) {
+        if (imageFile != null) {
+            // 새로운 채팅 메시지 객체를 생성합니다.
+            Chatting chatMessage = new Chatting("0", chattingroom_pid, my_pid, "name", "[사진]", reader, getCurrentTime(), 1);
+
+            // 이미지 경로를 추가합니다.
+            chatMessage.setImagePath(imageFile.getAbsolutePath());
+
+            // 채팅 리스트에 새 메시지를 추가합니다.
+            chatList.add(chatMessage);
+
+            chattingAdapter = new ChattingAdapter(chatList, getApplicationContext(), my_pid, chattingroom_pid);
+            rv_chat_list.setAdapter(chattingAdapter);
+            chattingAdapter.notifyItemInserted(chatList.size() - 1);
+
+            // 어댑터에 데이터가 추가되었음을 알립니다.
+
+            // 리사이클러뷰를 가장 마지막 항목으로 스크롤합니다.
+            rv_chat_list.scrollToPosition(chatList.size() - 1);
+        }
+    }
+    private void addOtherImageToRecyclerView(File imageFile, String senderid, String sendername) {
+        if (imageFile != null) {
+            // 새로운 채팅 메시지 객체를 생성합니다.
+            Chatting chatMessage = new Chatting("0", chattingroom_pid, senderid, sendername, "[사진]", reader, getCurrentTime(), 1);
+
+            // 이미지 경로를 추가합니다.
+            chatMessage.setImagePath(imageFile.getAbsolutePath());
+
+            // 채팅 리스트에 새 메시지를 추가합니다.
+            chatList.add(chatMessage);
+
+            chattingAdapter = new ChattingAdapter(chatList, getApplicationContext(), my_pid, chattingroom_pid);
+            rv_chat_list.setAdapter(chattingAdapter);
+            chattingAdapter.notifyItemInserted(chatList.size() - 1);
+
+            // 어댑터에 데이터가 추가되었음을 알립니다.
+
+            // 리사이클러뷰를 가장 마지막 항목으로 스크롤합니다.
+            rv_chat_list.scrollToPosition(chatList.size() - 1);
+        }
+    }
+    private void addImageToRecyclerViewBitMap(Bitmap imageBitmap) {
+        if (imageBitmap != null) {
+            // 새로운 채팅 메시지 객체를 생성합니다.
+            Chatting chatMessage = new Chatting("0", chattingroom_pid, my_pid, "name", "[사진]", reader, getCurrentTime(), 1);
+
+            // 이미지 비트를 추가합니다.
+            chatMessage.setImageBitmap(imageBitmap);  // Chatting 객체에 이미지 비트 설정
+
+            // 채팅 리스트에 새 메시지를 추가합니다.
+            chatList.add(chatMessage);
+
+            // 어댑터를 갱신하고 새로운 메시지를 추가합니다.
+            chattingAdapter = new ChattingAdapter(chatList, getApplicationContext(), my_pid, chattingroom_pid);
+            rv_chat_list.setAdapter(chattingAdapter);
+            chattingAdapter.notifyItemInserted(chatList.size() - 1);
+
+            // 리사이클러뷰를 가장 마지막 항목으로 스크롤합니다.
+            rv_chat_list.scrollToPosition(chatList.size() - 1);
+        }
+    }
+
+    private File saveImageToFile(Bitmap bitmap) {
+        File imageFile = null;
+        try {
+            File storageDir = getExternalFilesDir(null);
+            imageFile = new File(storageDir, "captured_image_" + System.currentTimeMillis() + ".jpg");
+
+            FileOutputStream fos = new FileOutputStream(imageFile);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
+            fos.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return imageFile;
     }
 
     // 권한 요청 결과 처리
@@ -383,10 +422,9 @@ public class ChattingActivity extends AppCompatActivity {
         ll_add_file.animate()
                 .translationY(0)  // 위로 올라오는 애니메이션
                 .alpha(1.0f)  // 투명도 적용 (페이드 인)
-                .setDuration(300)  // 300ms 동안 애니메이션 실행
+                .setDuration(500)  // 300ms 동안 애니메이션 실행
                 .start();
     }
-
 
     // 키보드를 숨기는 메서드
     private void hideKeyboard() {
@@ -396,16 +434,6 @@ public class ChattingActivity extends AppCompatActivity {
             imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
         }
     }
-
-    // 키보드 높이에 맞게 ll_add_file 레이아웃을 조정
-    private void adjustLayoutForKeyboard() {
-        if (keyboardHeight > 0) { // 키보드가 열려 있을 때만 조정
-            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) ll_add_file.getLayoutParams();
-            params.height = keyboardHeight; // 키보드 높이만큼 설정
-            ll_add_file.setLayoutParams(params);
-        }
-    }
-
     private void scrollToBottom() {
         if (chattingAdapter != null && chattingAdapter.getItemCount() > 0) {
             rv_chat_list.scrollToPosition(chattingAdapter.getItemCount() - 1);
@@ -471,17 +499,12 @@ public class ChattingActivity extends AppCompatActivity {
                     String msg = parts.length > 3 ? parts[3].trim() : "";
                     // 클라이언트 리스트 (콤마로 구분된 문자열)
                     String clients = parts.length > 4 ? parts[4].trim() : "";
-
                     clientList = new ArrayList<>(List.of(clients.split(",")));
-
                     // my_pid와 일치하는 항목을 제외
-
-
                     // 클라이언트 수를 기반으로 reader 수 계산
                     reader =  friend_pids.size() + 1  - clientList.size() ;
                     System.out.println("addMessageToRecyclerView reader : " + reader );
                     System.out.println("addMessageToRecyclerView clientList : " + clientList.size() );
-
                     // 현재 채팅방에 해당하는 메시지인지 확인
                     if (roomId.equals(chattingroom_pid) && !senderId.equals(my_pid)) {
                         // 입장 메시지 처리
@@ -505,6 +528,22 @@ public class ChattingActivity extends AppCompatActivity {
                         } else if (msg.equals("퇴장")) {
                             System.out.println("addMessageToRecyclerView clientList 퇴장 : " + clientList.size() );
                             // 일반 메시지 처리
+                        } else if (msg.startsWith("/9j/")) {
+                            String senderName = pidNameMap.getOrDefault(senderId, "Unknown");
+                            String base64String = msg;
+
+                            Bitmap decodedImage = decodeBase64ToBitmap(base64String);
+                            if (decodedImage != null) {
+                                // 파일로 저장 (원한다면)
+                                File imageFile = saveImageToFile(decodedImage);
+                                if (imageFile != null) {
+                                    addOtherImageToRecyclerView(imageFile, senderId, senderName);
+                                } else {
+                                    Log.e("ChattingActivity", "Failed to save image to file.");
+                                }
+                            } else {
+                                Log.e("ChattingActivity", "Failed to decode Base64 image.");
+                            }
                         } else {
                             // pidNameMap에서 senderId에 해당하는 이름을 찾음
                             String senderName = pidNameMap.getOrDefault(senderId, "Unknown");
@@ -700,7 +739,6 @@ public class ChattingActivity extends AppCompatActivity {
     }
 
     private void sendMessage(String message) {
-        System.out.println("sendMessage 클릭");
         Intent serviceIntent = new Intent(getApplicationContext(), SocketService.class);
         serviceIntent.setAction("SEND_MESSAGE");
         serviceIntent.putExtra("roompid", chattingroom_pid);
@@ -711,10 +749,6 @@ public class ChattingActivity extends AppCompatActivity {
     }
 
     private void onSendTalk(String msg, String my_pid, ArrayList<String> friend_pids) {
-        System.out.println("onSendTalk friend_pids : " + friend_pids.size());
-//        num = friend_pids.size() + 1;
-        System.out.println(clientList.size());
-        System.out.println(reader);
         // 새로운 메시지 생성
         Chatting chatMessage = new Chatting("0", chattingroom_pid, my_pid, "name", msg, reader, getCurrentTime(), 1);
 
@@ -738,8 +772,8 @@ public class ChattingActivity extends AppCompatActivity {
         });
         // 메시지를 서버로 전송하는 로직
         if (!chatList.isEmpty()) {
-            sendMessage(my_pid + "/" + chattingroom_pid + "/" + roomname + "/" + msg);
-            setData3(friend_pids, my_pid, msg);
+            sendMessage(my_pid + "|" + chattingroom_pid + "|" + roomname + "|" + msg);
+            uploadMessageAndImageToServer (msg, null);
             et_talk.setText(""); // 입력창 초기화
         }
     }
@@ -880,85 +914,85 @@ public class ChattingActivity extends AppCompatActivity {
         });
     }
     //ib_send_talk클릭했을때 my_pid, 친구pid , massage
-    private void setData3(ArrayList<String> friend_pids, String my_pid, String message) {
-        int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
-        if (status == NetworkStatus.TYPE_NOT_CONNECTED) {
-            Log.e("ChattingActivity", "네트워크 연결을 확인하세요.");
-            return;
-        }
-
-        // GET 방식 파라미터 추가
-        HttpUrl.Builder urlBuilder = HttpUrl.parse("http://49.247.32.169/NewProject/Set_talk.php").newBuilder();
-        urlBuilder.addQueryParameter("v", "1.0"); // 예시
-        String url = urlBuilder.build().toString();
-
-        // ArrayList<String> friend_pids를 콤마로 구분된 문자열로 변환
+    private void uploadMessageAndImageToServer(String message, File imageFile) {
+        System.out.println("uploadMessageAndImageToServer");
         String friendPidsString = TextUtils.join(",", friend_pids);
 
-        System.out.println("setData3 friend_pids수 : " + friend_pids.size());
-
-        // POST 방식 파라미터 추가
-        RequestBody formBody = new FormBody.Builder()
-                .add("my_pid", my_pid)
-                .add("friend_pids", friendPidsString)
-                .add("message", message)
-                .add("isBlocked" , String.valueOf(isBlocked))
-                .build();
-
-        // 요청 만들기
         OkHttpClient client = new OkHttpClient();
+        MultipartBody.Builder builder = new MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("message", message)
+                .addFormDataPart("my_pid", my_pid)
+                .addFormDataPart("friend_pids", friendPidsString)
+                .addFormDataPart("isBlocked" , String.valueOf(isBlocked))
+                .addFormDataPart("chattingroom_pid", chattingroom_pid);
+
+        if (imageFile != null) {
+            builder.addFormDataPart("image", imageFile.getName(),
+                    RequestBody.create(imageFile, okhttp3.MediaType.parse("image/jpeg")));
+        }
+
+        RequestBody requestBody = builder.build();
         Request request = new Request.Builder()
-                .url(url)
-                .post(formBody)
+                .url("http://49.247.32.169/NewProject/Set_talk.php")
+                .post(requestBody)
                 .build();
 
         client.newCall(request).enqueue(new Callback() {
             @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+            public void onFailure(Call call, IOException e) {
                 e.printStackTrace();
-                runOnUiThread(() -> Log.e("ChattingActivity", "네트워크 요청 실패"));
+                runOnUiThread(() -> Toast.makeText(ChattingActivity.this, "메시지 전송 실패", Toast.LENGTH_SHORT).show());
             }
 
             @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                runOnUiThread(() -> {
-                    try {
-                        if (!response.isSuccessful()) {
-                            // 응답 실패
-                            Log.e("ChattingActivity", "네트워크 문제 발생");
-                        } else {
-                            // 응답 성공
-                            Log.i("ChattingActivity", "응답 성공");
-                            String responseData = response.body().string();
-                            Log.i("ChattingActivity", "서버 응답: " + responseData);
+            public void onResponse(Call call, Response response) throws IOException {
+                // 서버로부터 받은 응답 처리
+                if (response.isSuccessful()) {
+                    // 서버 응답 내용을 문자열로 변환
+                    String responseData = response.body().string();
 
-                            try {
-                                JSONObject jsonResponse = new JSONObject(responseData);
-                                boolean success = jsonResponse.getBoolean("success");
-                                if (success) {
-                                    System.out.println(success);
-                                } else {
-                                    Log.e("ChattingActivity", "변경 실패");
-                                }
+                    // 서버 응답을 로그로 출력하여 확인
+                    Log.d("ChattingActivity", "Server Response: " + responseData);
 
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                                Log.e("ChattingActivity", "응답 처리 중 오류 발생");
+                    runOnUiThread(() -> {
+                        // 서버에서 받은 응답을 처리
+                        try {
+                            // 서버 응답이 JSON 형태라면 JSONObject로 파싱
+                            JSONObject jsonResponse = new JSONObject(responseData);
+
+                            boolean success = jsonResponse.getBoolean("success");
+                            String message = jsonResponse.getString("message");
+
+                            // 응답에 따라 처리
+                            if (success) {
+                            } else {
+                                Toast.makeText(ChattingActivity.this, "메시지 전송 실패: " + message, Toast.LENGTH_SHORT).show();
                             }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                            Toast.makeText(ChattingActivity.this, "서버 응답 처리 중 오류 발생", Toast.LENGTH_SHORT).show();
                         }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                });
+                    });
+                } else {
+                    runOnUiThread(() -> Toast.makeText(ChattingActivity.this, "서버 오류: " + response.message(), Toast.LENGTH_SHORT).show());
+                }
             }
         });
     }
+
     private void getData2(String room_pid) {
         int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
         if (status == NetworkStatus.TYPE_NOT_CONNECTED) {
             Log.e("ChattingActivity", "네트워크 연결을 확인하세요.");
             return;
         }
+
+        // 현재 보이는 첫 번째 아이템의 위치와 오프셋을 저장
+        LinearLayoutManager layoutManager = (LinearLayoutManager) rv_chat_list.getLayoutManager();
+        int firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition();
+        View firstVisibleItemView = layoutManager.findViewByPosition(firstVisibleItemPosition);
+        int offset = (firstVisibleItemView != null) ? firstVisibleItemView.getTop() : 0;
 
         HttpUrl.Builder urlBuilder = HttpUrl.parse("http://49.247.32.169/NewProject/Get_chatlist.php").newBuilder();
         urlBuilder.addQueryParameter("v", "1.0");
@@ -999,11 +1033,8 @@ public class ChattingActivity extends AppCompatActivity {
                             if (success) {
                                 JSONArray roomsArray = jsonResponse.getJSONArray("rooms");
 
-                                if (currentPage == 1) {
-                                    chatList.clear();
-                                }
-
-                                int startIndex = chatList.size();
+                                int newItemsCount = roomsArray.length();
+                                List<Chatting> newItems = new ArrayList<>();
 
                                 for (int i = 0; i < roomsArray.length(); i++) {
                                     JSONObject roomObject = roomsArray.getJSONObject(i);
@@ -1016,10 +1047,23 @@ public class ChattingActivity extends AppCompatActivity {
                                     int count = roomObject.getInt("count");
                                     int status = roomObject.getInt("status");
 
-                                    chatList.add(new Chatting(chatPid, room_pid, sender_pid, sender_name, msg, count, createTime, status));
-                                }
-                                System.out.println(chatList.size());
+                                    // 이미지 URL 받기
+                                    String imageUrl = roomObject.optString("image_url", null);
 
+                                    // Chatting 객체에 이미지 URL을 포함하여 추가
+                                    Chatting chatItem = new Chatting(chatPid, room_pid, sender_pid, sender_name, msg, count, createTime, status);
+                                    chatItem.setImagePath(imageUrl);  // 이미지 URL 설정
+                                    newItems.add(chatItem);
+                                }
+
+                                // 새로운 데이터 추가 후 어댑터 갱신
+                                chatList.addAll(0, newItems);
+
+                                // chattingAdapter 설정 및 RecyclerView에 적용
+                                chattingAdapter = new ChattingAdapter(chatList, getApplicationContext(), my_pid, chattingroom_pid);
+                                rv_chat_list.setAdapter(chattingAdapter);
+
+                                // JSONObject에서 "names" 객체를 가져와 pidNameMap에 추가
                                 JSONObject namesObject = jsonResponse.getJSONObject("names");
                                 Iterator<String> keys = namesObject.keys();
                                 while (keys.hasNext()) {
@@ -1028,16 +1072,21 @@ public class ChattingActivity extends AppCompatActivity {
                                     pidNameMap.put(key, name);
                                 }
 
-                                if (chattingAdapter == null) {
-                                    chattingAdapter = new ChattingAdapter(chatList, getApplicationContext(), my_pid, chattingroom_pid);
-                                    rv_chat_list.setAdapter(chattingAdapter);
+                                // 처음 로드될 때만 가장 아래로 스크롤
+                                if (isFirstLoad) {
+                                    // 스크롤을 맨 아래로 확실하게 이동하기 위해 약간의 지연을 둡니다.
+                                    rv_chat_list.postDelayed(() -> {
+                                        rv_chat_list.scrollToPosition(chatList.size() + 1);
+                                    }, 100);  // 100ms 정도의 지연을 줍니다.
+                                    isFirstLoad = false;  // 이후로는 자동 스크롤하지 않도록 설정
                                 } else {
-                                    chattingAdapter.notifyItemRangeInserted(startIndex, roomsArray.length());
-                                    chattingAdapter.notifyDataSetChanged();
+                                    // 기존 위치로 복원
+                                    layoutManager.scrollToPositionWithOffset(firstVisibleItemPosition + newItemsCount, offset);
                                 }
 
-                                isLoading = false;
+                                // 다음 페이지 로드를 위해 페이지 번호 증가
                                 currentPage++;
+                                isLoading = false;
                             } else {
                                 Log.e("ChattingActivity", "데이터 로드 실패");
                             }
@@ -1050,7 +1099,6 @@ public class ChattingActivity extends AppCompatActivity {
             }
         });
     }
-
 
 
     private void setData4(String room_pid, String reader_pid, Runnable callback) {

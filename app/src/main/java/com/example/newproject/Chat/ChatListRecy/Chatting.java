@@ -1,5 +1,7 @@
 package com.example.newproject.Chat.ChatListRecy;
 
+import android.graphics.Bitmap;
+
 public class Chatting {
     String pid ;
     String room_pid ;
@@ -10,6 +12,9 @@ public class Chatting {
     int count;
     String create;
     int status;
+    private String imagePath;  // 이미지 추가
+
+    private Bitmap imageBitmap;  // 이미지 비트맵 추가
 
     public Chatting(String pid, String room_pid, String sender_pid, String sender_name, String msg, int count, String create, int status) {
         this.pid = pid;
@@ -20,7 +25,6 @@ public class Chatting {
         this.count = count;
         this.create = create;
         this.status = status;
-
     }
 
     public String getPid() {
@@ -85,5 +89,20 @@ public class Chatting {
 
     public void setStatus(int status) {
         this.status = status;
+    }
+
+    public String getImagePath() {
+        return imagePath;
+    }
+
+    public void setImagePath(String imagePath) {
+        this.imagePath = imagePath;
+    }
+    public void setImageBitmap(Bitmap imageBitmap) {
+        this.imageBitmap = imageBitmap;
+    }
+
+    public Bitmap getImageBitmap() {
+        return imageBitmap;
     }
 }

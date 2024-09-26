@@ -10,8 +10,8 @@ import java.io.PrintWriter;
 import java.net.Socket;
 
 public class SocketClient extends AsyncTask<Void, Void, Void> {
-    private String serverIP = "172.30.1.60"; // 서버 IP를 적절히 변경하세요.
-    private int serverPort = 4040; // 사용하는 포트로 변경하세요.
+    private String serverIP = "172.30.1.40"; // 서버 IP를 적절히 변경하세요.
+    private int serverPort = 8080; // 사용하는 포트로 변경하세요.
     private String roompid;
     private String mypid;
     private String roomname;
@@ -44,7 +44,7 @@ public class SocketClient extends AsyncTask<Void, Void, Void> {
                 in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
                 // 서버에 소켓 열림 메시지를 보냄
-                sendMessage(mypid + "/" + roompid + "/" + roomname + "/" + "socket_open");
+                sendMessage(mypid + "|" + roompid + "|" + roomname + "|" + "socket_open");
                 Log.d("SocketClient", "Connected to server: " + serverIP + ":" + serverPort);
 
                 // 서버로부터 메시지 수신 대기
@@ -69,7 +69,8 @@ public class SocketClient extends AsyncTask<Void, Void, Void> {
         new Thread(() -> {
             synchronized (lock) {
                 if (out != null && socket != null && !socket.isClosed()) {
-                    out.println(message);
+                    String msg = message.replace("\n", "").replace("\r", "");
+                    out.println(msg);
                     Log.d("SocketClient", "Message sent: " + message);
                 } else {
                     Log.e("SocketClient", "Socket is not connected or output stream is null");

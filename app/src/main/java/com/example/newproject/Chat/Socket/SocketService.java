@@ -57,12 +57,12 @@ public class SocketService extends Service {
                     break;
                 case "IsBlock":
                     Log.d("SocketService", "User is blocked in room: " + roompid);
-                    sendMessage(mypid + "/" + roompid + "/" + roomname + "/차단");
+                    sendMessage(mypid + "|" + roompid + "|" + roomname + "|" + "차단");
                     break;  // 차단 처리 후 break 추가
 
                 case "UnBlock":
                     Log.d("SocketService", "User is unblocked in room: " + roompid);
-                    sendMessage(mypid + "/" + roompid + "/" + roomname + "/차단해제");
+                    sendMessage(mypid + "|" + roompid + "|" + roomname + "|" + "차단해제");
                     break;  // 차단 해제 처리 후 break 추가
 
                 default:
@@ -95,17 +95,16 @@ public class SocketService extends Service {
     private void joinRoom(String roompid, String roomname, String mypid) {
         Log.d("SocketService", "Joining room: " + roompid);
         if (socketClient != null) {
-            socketClient.sendMessage(mypid + "/" + roompid + "/" + roomname + "/입장");
+            socketClient.sendMessage(mypid + "|" + roompid + "|" + roomname + "|" + "입장");
 
             // 해당 방에 대한 알림을 받지 않도록 설정
             roomNotificationStatus.put(roompid, false);
-
         }
     }
     private void exitRoom(String roompid, String roomname, String mypid) {
         Log.d("SocketService", "Exiting room: " + roompid);
         if (socketClient != null) {
-            socketClient.sendMessage(mypid + "/" + roompid + "/" + roomname + "/퇴장");
+            socketClient.sendMessage(mypid + "|" + roompid + "|" + roomname + "|" + "퇴장");
             // 해당 방에 대한 알림을 다시 활성화
             roomNotificationStatus.put(roompid, true);
         }
@@ -146,6 +145,8 @@ public class SocketService extends Service {
                 roomNotificationStatus.put(roomId, true);   // 퇴장 시 알림 활성화
                 Log.d("SocketService", "User has exited room " + roomId + ", enabling notifications for this room.");
             }
+        } else if (msg.startsWith("/9j/")) {
+            msg = "[사진]";
         }
 
         // 알림 상태에 따라 알림 표시 여부 결정
