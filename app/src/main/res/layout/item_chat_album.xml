@@ -1,0 +1,33 @@
+<RelativeLayout
+    android:id="@+id/rl_item_image"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="155dp"
+    android:layout_height="155dp"
+    android:gravity="center">
+
+        <!-- 이미지뷰는 전체 레이아웃을 채움 -->
+        <ImageView
+            android:id="@+id/iv_album_im"
+            android:layout_width="150dp"
+            android:layout_height="150dp"
+            android:scaleType="centerCrop"
+            android:layout_centerInParent="true"
+            android:adjustViewBounds="true" />
+
+        <!-- 이미지가 선택되면 보여질 순서 표시 TextView -->
+        <TextView
+            android:id="@+id/tv_selected_order"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentEnd="true"
+            android:layout_marginTop="5dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/round_background_yellow_circle"
+            android:gravity="center"
+            android:textColor="@color/black"
+            android:visibility="gone"
+            android:textStyle="bold"
+            android:textSize="16sp" />
+
+</RelativeLayout>

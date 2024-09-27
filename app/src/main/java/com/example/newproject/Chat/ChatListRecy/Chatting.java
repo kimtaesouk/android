@@ -14,7 +14,6 @@ public class Chatting {
     int status;
     private String imagePath;  // 이미지 추가
 
-    private Bitmap imageBitmap;  // 이미지 비트맵 추가
 
     public Chatting(String pid, String room_pid, String sender_pid, String sender_name, String msg, int count, String create, int status) {
         this.pid = pid;
@@ -97,12 +96,5 @@ public class Chatting {
 
     public void setImagePath(String imagePath) {
         this.imagePath = imagePath;
-    }
-    public void setImageBitmap(Bitmap imageBitmap) {
-        this.imageBitmap = imageBitmap;
-    }
-
-    public Bitmap getImageBitmap() {
-        return imageBitmap;
     }
 }

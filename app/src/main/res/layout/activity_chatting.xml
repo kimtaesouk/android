@@ -129,6 +129,8 @@
 
                 </LinearLayout>
 
+
+
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -152,6 +154,18 @@
                         android:textStyle="bold"/>
 
                 </LinearLayout>
+
+            </LinearLayout>
+            <LinearLayout
+                android:id="@+id/ll_image_album"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_image_album"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"/>
 
             </LinearLayout>
 

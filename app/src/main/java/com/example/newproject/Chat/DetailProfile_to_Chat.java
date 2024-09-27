@@ -37,7 +37,6 @@ public class DetailProfile_to_Chat extends AppCompatActivity {
     ImageButton ib_back, ib_enter_add, ib_enter_block, ib_option, ib_enter_notblock;
     String mypid, friend_pid, roompid;
     String status; // status를 클래스 필드로 선언
-
     LinearLayout ll_notblock , ll_isblock, ll_add_friend, ll_video_talk, ll_voice_talk;
 
     @Override
@@ -65,7 +64,12 @@ public class DetailProfile_to_Chat extends AppCompatActivity {
         getData(mypid, friend_pid); // 서버로부터 데이터를 가져옴
 
         ib_option.setOnClickListener(v -> showPopupMenu(ib_option, friend_pid, status)); // 클릭 시 상태를 반영
-        ib_back.setOnClickListener(v -> finish());
+        ib_back.setOnClickListener(v -> {
+            Intent resultIntent = new Intent();
+            setResult(RESULT_OK, resultIntent);  // RESULT_OK와 함께 전달
+
+            finish();  // 액티비티 종료
+        });
         ib_enter_add.setOnClickListener(v -> handleAction(friend_pid, "return"));
         ib_enter_block.setOnClickListener(v -> handleAction(friend_pid, "block"));
         ib_enter_notblock.setOnClickListener(v -> handleAction(friend_pid, "unblock"));

@@ -1,5 +1,6 @@
 package com.example.newproject.Chat.ChatListRecy;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.icu.text.SimpleDateFormat;
@@ -30,6 +31,7 @@ public class ChattingAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     // 채팅 리스트 및 컨텍스트, 사용자 ID
     private List<Object> chatListWithDates; // 날짜가 포함된 새로운 리스트
     private Context context;
+    private Activity activity;  // Activity 추가
     private String pid, roompid;
 
     // 뷰 타입 정의
@@ -38,7 +40,8 @@ public class ChattingAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     private static final int VIEW_TYPE_RECEIVED = 2;
 
     // 생성자
-    public ChattingAdapter(List<Chatting> ChattingList, Context context, String pid, String roompid) {
+    public ChattingAdapter(Activity activity, List<Chatting> ChattingList, Context context, String pid, String roompid) {
+        this.activity = activity;  // Activity 저장
         this.context = context;
         this.pid = pid;
         this.chatListWithDates = generateChatListWithDates(ChattingList); // 날짜가 포함된 리스트 생성
@@ -199,7 +202,7 @@ public class ChattingAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                     intent.putExtra("mypid", pid);
                     intent.putExtra("friend_pid", chatting.sender_pid);
                     intent.putExtra("roompid", roompid);
-                    context.startActivity(intent);
+                    activity.startActivityForResult(intent, 123);  // startActivityForResult() 호출
                 });
             }
         }
