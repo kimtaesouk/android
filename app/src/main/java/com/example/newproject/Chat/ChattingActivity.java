@@ -149,6 +149,7 @@ public class ChattingActivity extends AppCompatActivity {
         friend_pids = intent.getStringArrayListExtra("friend_pid");
 
         if (friend_pids.size() == 1 || chattingroom_pid == null) {
+            System.out.println("friend_pids.size()가 1 ");
             JSONArray jsonArray = new JSONArray(friend_pids);
             String friendPidsString = jsonArray.toString();
             getData(my_pid, friendPidsString);
@@ -381,7 +382,12 @@ public class ChattingActivity extends AppCompatActivity {
         }
         if (requestCode == 123) {
             // 데이터 새로고침 로직
-            System.out.println("onActivityResult");
+            String isblock = data.getStringExtra("isblock");
+//            if (isblock.equals("true")){
+//                isBlocked = true;
+//            }else {
+//                isBlocked = false;
+//            }
             if (friend_pids.size() == 1 || chattingroom_pid == null) {
                 JSONArray jsonArray = new JSONArray(friend_pids);
                 String friendPidsString = jsonArray.toString();
@@ -1016,7 +1022,7 @@ public class ChattingActivity extends AppCompatActivity {
     }
     //ib_send_talk클릭했을때 my_pid, 친구pid , massage
     private void uploadMessageAndImageToServer(String message, File imageFile) {
-        System.out.println("uploadMessageAndImageToServer");
+        System.out.println("isBlocked : " + String.valueOf(isBlocked));
         String friendPidsString = TextUtils.join(",", friend_pids);
 
         OkHttpClient client = new OkHttpClient();

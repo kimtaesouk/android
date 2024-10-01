@@ -38,6 +38,7 @@ public class DetailProfile_to_Chat extends AppCompatActivity {
     String mypid, friend_pid, roompid;
     String status; // status를 클래스 필드로 선언
     LinearLayout ll_notblock , ll_isblock, ll_add_friend, ll_video_talk, ll_voice_talk;
+    private boolean isblock = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,8 +67,8 @@ public class DetailProfile_to_Chat extends AppCompatActivity {
         ib_option.setOnClickListener(v -> showPopupMenu(ib_option, friend_pid, status)); // 클릭 시 상태를 반영
         ib_back.setOnClickListener(v -> {
             Intent resultIntent = new Intent();
+            resultIntent.putExtra("isblock" , String.valueOf(isblock));
             setResult(RESULT_OK, resultIntent);  // RESULT_OK와 함께 전달
-
             finish();  // 액티비티 종료
         });
         ib_enter_add.setOnClickListener(v -> handleAction(friend_pid, "return"));
@@ -121,6 +122,7 @@ public class DetailProfile_to_Chat extends AppCompatActivity {
             state = "delete";
         } else if ("unblock".equals(action)) {
             state = "unblock";
+            isblock = false;
             Intent serviceIntent = new Intent(this, SocketService.class);
             serviceIntent.setAction("UnBlock");
             serviceIntent.putExtra("roompid", roompid); // 방 ID
@@ -128,6 +130,7 @@ public class DetailProfile_to_Chat extends AppCompatActivity {
             serviceIntent.putExtra("message", "UnBlock");           // 차단해제 메시지
             startService(serviceIntent);
         } else if ("block".equals(action)) {
+            isblock = true;
             state = "isBlock";
             Intent serviceIntent = new Intent(this, SocketService.class);
             serviceIntent.setAction("IsBlock");
