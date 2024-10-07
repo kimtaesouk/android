@@ -87,7 +87,7 @@ public class ChatFragment extends Fragment {
             if ("com.example.NewProject.NEW_MESSAGE".equals(action)) {
                 String msg = intent.getStringExtra("message").trim();
                 // 메시지를 RecyclerView에 추가하는 로직
-                System.out.println("chat BroadcastReceiver : " + msg);
+                System.out.println("chatFrag BroadcastReceiver : " + msg);
                 addMessageToRecyclerView(msg);
             }
         }
@@ -102,7 +102,7 @@ public class ChatFragment extends Fragment {
                     String[] parts = new String[0];
                     try {
                         // 메시지 파싱
-                        parts = message.split(":");
+                        parts = message.split("\\|");
                         String senderId = parts[0].trim();
                         String roomId = parts[1].trim();
                         String msg = parts.length > 3 ? parts[3].trim() : "";

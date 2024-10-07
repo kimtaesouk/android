@@ -13,9 +13,7 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-
-            <!-- 채팅 내용이 들어가는 뷰 -->
-
+        <!-- 채팅 내용이 들어가는 뷰 -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rv_chat_list"
             android:layout_width="match_parent"
@@ -23,19 +21,17 @@
             android:layout_weight="1"
             android:gravity="bottom"
             android:background="#D9E5FF"
-            android:scrollbars="vertical">
-        </androidx.recyclerview.widget.RecyclerView>
-
+            android:scrollbars="vertical" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
-
                 <ImageButton
                     android:id="@+id/ib_add_file"
                     android:layout_width="50dp"
@@ -43,6 +39,7 @@
                     android:src="@drawable/baseline_add_24"
                     android:layout_gravity="center"
                     android:background="@null" />
+
                 <ImageButton
                     android:id="@+id/ib_clear_file"
                     android:layout_width="50dp"
@@ -50,7 +47,7 @@
                     android:src="@drawable/baseline_clear_24"
                     android:layout_gravity="center"
                     android:background="@null"
-                    android:visibility="gone"/>
+                    android:visibility="gone" />
 
                 <RelativeLayout
                     android:layout_width="wrap_content"
@@ -71,8 +68,7 @@
                         android:inputType="textMultiLine"
                         android:maxLines="5"
                         android:minHeight="35dp"
-                        android:scrollbars="vertical"/>
-
+                        android:scrollbars="vertical" />
 
                     <ImageButton
                         android:id="@+id/ib_send_talk"
@@ -89,12 +85,8 @@
                         android:padding="0dp"
                         android:scaleType="fitCenter"
                         android:src="@drawable/baseline_arrow_upward_24"
-                        android:visibility="gone"/>
-
+                        android:visibility="gone" />
                 </RelativeLayout>
-
-
-
             </LinearLayout>
 
             <LinearLayout
@@ -116,8 +108,7 @@
                         android:layout_height="55dp"
                         android:src="@drawable/baseline_insert_photo_242"
                         android:layout_gravity="center"
-                        android:background="@null"
-                        />
+                        android:background="@null" />
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -125,11 +116,8 @@
                         android:text="앨범"
                         android:textSize="22sp"
                         android:layout_gravity="center"
-                        android:textStyle="bold"/>
-
+                        android:textStyle="bold" />
                 </LinearLayout>
-
-
 
                 <LinearLayout
                     android:layout_width="wrap_content"
@@ -142,8 +130,7 @@
                         android:layout_height="55dp"
                         android:src="@drawable/baseline_camera_alt_24"
                         android:layout_gravity="center"
-                        android:background="@null"
-                        />
+                        android:background="@null" />
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -151,157 +138,163 @@
                         android:text="카메라"
                         android:textSize="22sp"
                         android:layout_gravity="center"
-                        android:textStyle="bold"/>
-
+                        android:textStyle="bold" />
                 </LinearLayout>
-
             </LinearLayout>
+
             <LinearLayout
                 android:id="@+id/ll_image_album"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:visibility="gone">
-
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rv_image_album"
                     android:layout_width="wrap_content"
-                    android:layout_height="match_parent"/>
-
+                    android:layout_height="match_parent" />
             </LinearLayout>
-
         </LinearLayout>
-
-
     </LinearLayout>
+
+    <!-- 투명한 오버레이와 ProgressBar -->
+    <FrameLayout
+        android:id="@+id/progress_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#80000000"
+        android:visibility="gone">
+
+    <!-- 중앙에 ProgressBar -->
+    <ProgressBar
+        android:id="@+id/progress_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="visible" />
+    </FrameLayout>
 
     <!-- 상단에 고정된 이름 부분 -->
-    <LinearLayout
-        android:layout_width="match_parent"
+<LinearLayout
+android:layout_width="match_parent"
+android:layout_height="wrap_content"
+android:orientation="vertical">
+
+<LinearLayout
+    android:id="@+id/ll_name"
+    android:layout_width="match_parent"
+    android:layout_height="50dp"
+    android:orientation="horizontal"
+    android:background="#D9D9E5FF"
+    android:layout_gravity="top|center"
+    android:elevation="8dp">
+
+    <ImageButton
+        android:id="@+id/ib_back"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/baseline_arrow_back_ios_new_24"
+        android:layout_gravity="center"
+        android:layout_margin="10dp"
+        android:background="@null" />
+
+    <TextView
+        android:id="@+id/tv_friend_name"
+        android:layout_width="250dp"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:text="name"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:layout_marginLeft="5dp"
+        android:textSize="30sp"
+        android:textStyle="bold"
+        android:background="@null"
+        android:maxLines="1"
+        android:ellipsize="end" />
 
-        <LinearLayout
-            android:id="@+id/ll_name"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:orientation="horizontal"
-            android:background="#D9D9E5FF"
-            android:layout_gravity="top|center"
-            android:elevation="8dp"> <!-- 높이 추가하여 앞에 오도록 함 -->
+    <ImageButton
+        android:id="@+id/ib_room_option"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/baseline_density_medium_24"
+        android:background="@null"
+        android:layout_gravity="center"
+        android:layout_marginLeft="30dp" />
+</LinearLayout>
 
-            <ImageButton
-                android:id="@+id/ib_back"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:src="@drawable/baseline_arrow_back_ios_new_24"
-                android:layout_gravity="center"
-                android:layout_margin="10dp"
-                android:background="@null"
-                />
+<LinearLayout
+    android:id="@+id/ll_friend_add_or_block"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:background="@drawable/board"
+    android:gravity="center"
+    android:visibility="gone"
+    android:layout_margin="5dp">
 
-            <TextView
-                android:id="@+id/tv_friend_name"
-                android:layout_width="250dp"
-                android:layout_height="wrap_content"
-                android:text="name"
-                android:layout_gravity="center"
-                android:gravity="center"
-                android:layout_marginLeft="5dp"
-                android:textSize="30sp"
-                android:textStyle="bold"
-                android:background="@null"
-                android:maxLines="1"
-                android:ellipsize="end"/>
-
-            <ImageButton
-                android:id="@+id/ib_room_option"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:src="@drawable/baseline_density_medium_24"
-                android:background="@null"
-                android:layout_gravity="center"
-                android:layout_marginLeft="30dp"/>
-
-        </LinearLayout>
-
-
-        <LinearLayout
-            android:id="@+id/ll_friend_add_or_block"
-            android:layout_width="match_parent"
+    <LinearLayout
+        android:id="@+id/ll_add_friend"
+        android:layout_width="wrap_content"
+        android:layout_height="50dp"
+        android:orientation="horizontal"
+        android:layout_weight="1"
+        android:gravity="center">
+        <ImageView
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+            android:src="@drawable/baseline_person_add_alt_1_24"
+            android:background="@null" />
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:background="@drawable/board"
-            android:gravity="center"
-            android:visibility="gone"
-            android:layout_margin="5dp">
-
-            <LinearLayout
-                android:id="@+id/ll_add_friend"
-                android:layout_width="wrap_content"
-                android:layout_height="50dp"
-                android:orientation="horizontal"
-                android:layout_weight="1"
-                android:gravity="center">
-                <ImageView
-                    android:layout_width="35dp"
-                    android:layout_height="35dp"
-                    android:src="@drawable/baseline_person_add_alt_1_24"
-                    android:background="@null"/>
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="추가"
-                    android:textSize="22sp"
-                    android:textStyle="bold"
-                    android:layout_marginLeft="10dp"/>
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/ll_block"
-                android:layout_width="wrap_content"
-                android:layout_height="50dp"
-                android:orientation="horizontal"
-                android:layout_weight="1"
-                android:gravity="center">
-                <ImageView
-                    android:layout_width="35dp"
-                    android:layout_height="35dp"
-                    android:src="@drawable/baseline_block_24"
-                    android:background="@null"/>
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="차단"
-                    android:textSize="22sp"
-                    android:textStyle="bold"
-                    android:layout_marginLeft="10dp"/>
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/ll_block_clear"
-                android:layout_width="wrap_content"
-                android:layout_height="50dp"
-                android:orientation="horizontal"
-                android:layout_weight="1"
-                android:gravity="center">
-                <ImageView
-                    android:layout_width="35dp"
-                    android:layout_height="35dp"
-                    android:src="@drawable/baseline_block_24"
-                    android:background="@null"/>
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="차단해제"
-                    android:textSize="22sp"
-                    android:textStyle="bold"
-                    android:layout_marginLeft="10dp"/>
-            </LinearLayout>
-
-
-        </LinearLayout>
+            android:text="추가"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:layout_marginLeft="10dp" />
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/ll_block"
+        android:layout_width="wrap_content"
+        android:layout_height="50dp"
+        android:orientation="horizontal"
+        android:layout_weight="1"
+        android:gravity="center">
+        <ImageView
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+            android:src="@drawable/baseline_block_24"
+            android:background="@null" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="차단"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:layout_marginLeft="10dp" />
+    </LinearLayout>
 
-
+    <LinearLayout
+        android:id="@+id/ll_block_clear"
+        android:layout_width="wrap_content"
+        android:layout_height="50dp"
+        android:orientation="horizontal"
+        android:layout_weight="1"
+        android:gravity="center">
+        <ImageView
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+            android:src="@drawable/baseline_block_24"
+            android:background="@null" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="차단해제"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:layout_marginLeft="10dp" />
+    </LinearLayout>
+</LinearLayout>
+</LinearLayout>
 </FrameLayout>
+
+
+

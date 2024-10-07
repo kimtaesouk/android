@@ -118,11 +118,11 @@ public class SocketService extends Service {
     // 메시지 도착 시 호출되는 메서드
     // 메시지 처리 로직을 메서드로 분리
     private void handleIncomingMessage(String message, String mypid) {
-        String[] parts = message.split(":");
+        String[] parts = message.split("\\|");
         String senderId = parts[0].trim();
         String roomId = parts[1].trim();
         String roomname = parts[2].trim();
-        String msg = parts.length > 3 ? parts[3].trim() : "";
+        String msg = parts[3].trim();
         String clients = parts.length > 4 ? parts[4].trim() : "";
         int notificationId = roomId.hashCode();
 
@@ -133,6 +133,7 @@ public class SocketService extends Service {
 
         // 방의 알림 상태를 처음 설정하는 경우 기본값을 true로 설정
         roomNotificationStatus.putIfAbsent(roomId, true);
+        System.out.println("socketservice msg : " + msg);
 
         // 입장 및 퇴장 메시지에 따라 알림 상태 업데이트
         if (msg.equals("입장")) {
@@ -145,7 +146,7 @@ public class SocketService extends Service {
                 roomNotificationStatus.put(roomId, true);   // 퇴장 시 알림 활성화
                 Log.d("SocketService", "User has exited room " + roomId + ", enabling notifications for this room.");
             }
-        } else if (msg.startsWith("/9j/")) {
+        } else if (msg.startsWith("http://")) {
             msg = "[사진]";
         }
 

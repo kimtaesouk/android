@@ -35,8 +35,10 @@ import android.view.View;
 import android.view.ViewTreeObserver;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -57,9 +59,12 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -76,12 +81,14 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
-public class ChattingActivity extends AppCompatActivity {
+public class ChattingActivity extends AppCompatActivity implements ImageAlbumAdapter.OnImageClickListener {
     TextView tv_friend_name; // 친구의 이름을 표시할 TextView
     EditText et_talk; // 채팅 내용을 입력할 EditText
     ImageButton ib_send_talk, ib_back, ib_room_option, ib_add_file, ib_clear_file, ib_chat_camara, ib_chat_album;
     LinearLayout ll_friend_add_or_block, ll_block_clear, ll_block, ll_add_friend, ll_add_file, ll_image_album;
     // 친구의 이름과 친구의 PID (개인 식별자)
+    ProgressBar progressBar;
+    FrameLayout progressOverlay;
     String friend_pid, my_pid, chattingroom_pid, roomname;
     RecyclerView rv_chat_list, rv_image_album;
     ChattingAdapter chattingAdapter;
@@ -125,6 +132,9 @@ public class ChattingActivity extends AppCompatActivity {
 
         rv_image_album = findViewById(R.id.rv_image_album);
         ll_image_album = findViewById(R.id.ll_image_album);
+        progressBar = findViewById(R.id.progress_bar);
+
+        progressOverlay = findViewById(R.id.progress_overlay);
 
         LinearLayoutManager layoutManager = new LinearLayoutManager(getApplicationContext());
         layoutManager.setStackFromEnd(true);
@@ -198,8 +208,13 @@ public class ChattingActivity extends AppCompatActivity {
             ll_image_album.setVisibility(View.GONE);
             ib_add_file.setVisibility(View.VISIBLE);
             et_talk.setVisibility(View.VISIBLE);
-
+            // 선택된 이미지 리스트를 초기화
+            ImageAlbumAdapter adapter = (ImageAlbumAdapter) rv_image_album.getAdapter();
+            if (adapter != null) {
+                adapter.clearSelectedImages();
+            }
         });
+
 
         ib_chat_camara.setOnClickListener(v -> {
             if (ContextCompat.checkSelfPermission(ChattingActivity.this, Manifest.permission.CAMERA)
@@ -265,7 +280,25 @@ public class ChattingActivity extends AppCompatActivity {
         serviceIntent.putExtra("roomname", roomname);        // 방 이름
         serviceIntent.putExtra("mypid", my_pid);             // 내 ID
         serviceIntent.putExtra("message", "퇴장");
+
     }
+
+    private void scrollToBottom() {
+        rv_chat_list.post(() -> {
+            if (chattingAdapter != null && chattingAdapter.getItemCount() > 0) {
+                // 마지막 아이템의 포지션
+                int lastPosition = chattingAdapter.getItemCount() - 1;
+
+                // 스크롤을 정확한 위치로 설정
+                LinearLayoutManager layoutManager = (LinearLayoutManager) rv_chat_list.getLayoutManager();
+                if (layoutManager != null) {
+                    // 강제로 마지막 위치로 이동
+                    layoutManager.scrollToPositionWithOffset(lastPosition, 0);
+                }
+            }
+        });
+    }
+
 
     private void loadGalleryImages() {
         ArrayList<Uri> imageUris = new ArrayList<>();
@@ -299,6 +332,17 @@ public class ChattingActivity extends AppCompatActivity {
         // RecyclerView에 이미지 URI 리스트 표시
         displayImagesInRecyclerView(imageUris);
     }
+    // ProgressBar를 보이는 함수
+    private void showProgressBar(FrameLayout progressOverlay) {
+        progressOverlay.setVisibility(View.VISIBLE); // 오버레이 표시
+        progressBar.setVisibility(View.VISIBLE);     // ProgressBar 표시
+    }
+
+    // ProgressBar를 숨기는 함수
+    private void hideProgressBar(FrameLayout progressOverlay) {
+        progressOverlay.setVisibility(View.GONE);    // 오버레이 숨김
+        progressBar.setVisibility(View.GONE);        // ProgressBar 숨김
+    }
 
     private void displayImagesInRecyclerView(ArrayList<Uri> imageUris) {
         // RecyclerView 레이아웃 설정 (가로 스크롤)
@@ -306,13 +350,60 @@ public class ChattingActivity extends AppCompatActivity {
         rv_image_album.setLayoutManager(horizontalLayoutManager);
 
         // 어댑터 설정
-        ImageAlbumAdapter adapter = new ImageAlbumAdapter(imageUris, this);
+        ImageAlbumAdapter adapter = new ImageAlbumAdapter(imageUris, this, ChattingActivity.this);
         rv_image_album.setAdapter(adapter);
 
         // 이미지가 포함된 LinearLayout을 보이게 설정
         ll_add_file.setVisibility(View.GONE);
         ll_image_album.setVisibility(View.VISIBLE);
         et_talk.setVisibility(View.GONE);
+    }
+
+    @Override
+    public void onImageClick(ArrayList<Uri> selectedImages) {
+        // 선택된 이미지를 Bitmap 리스트로 변환
+        List<Bitmap> imageBitmaps = new ArrayList<>();
+        System.out.println(selectedImages.size());
+
+        if (selectedImages.size() == 0) {
+            ib_send_talk.setVisibility(View.GONE);
+        } else {
+            ib_send_talk.setVisibility(View.VISIBLE);
+
+            // 각 Uri를 Bitmap으로 변환하여 리스트에 추가
+            for (Uri imageUri : selectedImages) {
+                try {
+                    Bitmap imageBitmap = uriToBitmap(imageUri);
+                    imageBitmaps.add(imageBitmap);  // 변환된 Bitmap을 리스트에 추가
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    Toast.makeText(this, "이미지 처리 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            // 전송 버튼에 대한 클릭 리스너 설정
+            ib_send_talk.setOnClickListener(v -> {
+                // ProgressBar를 표시
+                showProgressBar(progressOverlay);
+
+                // 선택된 모든 이미지를 전송 (선택한 순서대로)
+                sendChatMessageWithImages(et_talk.getText().toString(), selectedImages);
+
+                ll_image_album.setVisibility(View.GONE);
+                ib_clear_file.setVisibility(View.GONE);
+                ib_add_file.setVisibility(View.VISIBLE);
+                et_talk.setVisibility(View.VISIBLE);
+                ib_send_talk.setVisibility(View.GONE);
+
+                // 전송이 완료되면 ProgressBar를 숨김
+                runOnUiThread(() -> hideProgressBar(progressOverlay));
+            });
+        }
+    }
+
+    // Uri를 Bitmap으로 변환하는 메서드
+    private Bitmap uriToBitmap(Uri imageUri) throws IOException {
+        return MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri);
     }
 
     private void openCamera() {
@@ -358,36 +449,25 @@ public class ChattingActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == CAMERA_INTENT_REQUEST_CODE && resultCode == RESULT_OK) {
-            // Intent에서 Bitmap 데이터를 가져옵니다.
+            // 카메라로 찍은 이미지를 가져옵니다.
             Bundle extras = data.getExtras();
             capturedImage = (Bitmap) extras.get("data");
 
             // 이미지 URI를 확인합니다.
             Uri imageUri = data.getData();
+            List<Uri> imageUris = new ArrayList<>();
 
-            // URI가 없으면 Bitmap만을 처리합니다.
-            if (imageUri != null) {
-                try {
-                    // EXIF 데이터를 확인하고 이미지를 회전시킵니다.
-                    Bitmap rotatedImage = rotateImageIfRequired(this, capturedImage, imageUri);
-                    sendChatMessageWithImage(et_talk.getText().toString(), rotatedImage);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    Toast.makeText(this, "이미지 처리 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show();
-                }
-            } else {
-                // URI가 없을 경우, 그냥 capturedImage 사용
-                sendChatMessageWithImage(et_talk.getText().toString(), capturedImage);
+            // URI가 없으면 Bitmap을 임시 파일로 변환하고 URI로 처리
+            if (imageUri == null) {
+                File imageFile = saveImageToFile(capturedImage);
+                imageUri = Uri.fromFile(imageFile);
             }
-        }
-        if (requestCode == 123) {
-            // 데이터 새로고침 로직
-            String isblock = data.getStringExtra("isblock");
-//            if (isblock.equals("true")){
-//                isBlocked = true;
-//            }else {
-//                isBlocked = false;
-//            }
+
+            imageUris.add(imageUri);
+
+            // 선택한 이미지를 전송
+            sendChatMessageWithImages(et_talk.getText().toString(), imageUris);
+        }else if (requestCode == 123) {
             if (friend_pids.size() == 1 || chattingroom_pid == null) {
                 JSONArray jsonArray = new JSONArray(friend_pids);
                 String friendPidsString = jsonArray.toString();
@@ -396,32 +476,40 @@ public class ChattingActivity extends AppCompatActivity {
         }
     }
 
-    private void sendChatMessageWithImage(String message, Bitmap imageBitmap) {
-        File imageFile = null;
-        String encodedImage = null;
+    private void sendChatMessageWithImages(String message, List<Uri> selectedImages) {
+        List<File> imageFiles = new ArrayList<>();
 
-        if (imageBitmap != null) {
-            // 이미지를 Base64로 인코딩합니다.
-            encodedImage = encodeImageToBase64(imageBitmap);
+        // 선택된 이미지를 Uri 순서대로 처리
+        for (Uri imageUri : selectedImages) {
+            try {
+                // 이미지를 Bitmap으로 변환
+                Bitmap imageBitmap = uriToBitmap(imageUri);
 
-            // 이미지 파일을 생성합니다.
-            imageFile = saveImageToFile(imageBitmap);
+                // 이미지 파일로 변환 후 리스트에 추가
+                File imageFile = saveImageToFile(imageBitmap);
+                imageFiles.add(imageFile);
 
-            // 리사이클러뷰에 이미지를 바로 추가합니다.
-            addImageToRecyclerView(imageBitmap, imageFile);
+                // 선택한 이미지의 순서대로 RecyclerView에 추가
+                addImageToRecyclerView(imageFile);
+                uploadMessageAndImageToServer("사진을 보냈습니다.", imageFile);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
-        // 메시지와 이미지를 서버로 전송합니다.
-        uploadMessageAndImageToServer("[사진]", imageFile);
+        // 서버로 파일을 순서대로 전송
 
-        // Base64로 인코딩한 이미지를 포함한 메시지를 서버로 전송합니다.
-        sendMessage(my_pid + "|" + chattingroom_pid + "|" + roomname + "|" + encodedImage);
-
-        // 메시지가 있을 경우 추가로 처리합니다.
+        // 메시지가 있을 경우 추가로 처리
         if (!message.isEmpty()) {
             onSendTalk(message, my_pid, friend_pids); // 메시지 추가
         }
     }
+
+
+
+
+
+
     private String encodeImageToBase64(Bitmap imageBitmap) {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         imageBitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
@@ -446,31 +534,31 @@ public class ChattingActivity extends AppCompatActivity {
     }
 
     // 리사이클러뷰에 이미지와 함께 데이터를 추가하는 메서드
-    private void addImageToRecyclerView(Bitmap imageBitmap, File imageFile) {
+    private void addImageToRecyclerView(File imageFile) {
         if (imageFile != null) {
-            // 새로운 채팅 메시지 객체를 생성합니다.
-            Chatting chatMessage = new Chatting("0", chattingroom_pid, my_pid, "name", "[사진]", reader, getCurrentTime(), 1);
+            // 새로운 채팅 메시지 객체를 생성
+            Chatting chatMessage = new Chatting("0", chattingroom_pid, my_pid, "name", "사진을 보냈습니다.", reader, getCurrentTime(), 1);
 
-            // 이미지 경로를 추가합니다.
+            // 이미지 경로를 추가
             chatMessage.setImagePath(imageFile.getAbsolutePath());
 
-            // 채팅 리스트에 새 메시지를 추가합니다.
-            chatList.add(chatMessage);
-
-            chattingAdapter = new ChattingAdapter(this, chatList, getApplicationContext(), my_pid, chattingroom_pid);
-            rv_chat_list.setAdapter(chattingAdapter);
-            chattingAdapter.notifyItemInserted(chatList.size() - 1);
-
-            // 어댑터에 데이터가 추가되었음을 알립니다.
-
-            // 리사이클러뷰를 가장 마지막 항목으로 스크롤합니다.
-            rv_chat_list.scrollToPosition(chatList.size() - 1);
+            // UI 스레드에서 RecyclerView에 추가
+            runOnUiThread(() -> {
+                chatList.add(chatMessage);
+                chattingAdapter = new ChattingAdapter(this, chatList, getApplicationContext(), my_pid, chattingroom_pid);
+                rv_chat_list.setAdapter(chattingAdapter);
+                chattingAdapter.notifyItemInserted(chatList.size() - 1);
+                scrollToBottom();
+                hideProgressBar(progressOverlay);
+            });
         }
     }
+
+
     private void addOtherImageToRecyclerView(File imageFile, String senderid, String sendername) {
         if (imageFile != null) {
             // 새로운 채팅 메시지 객체를 생성합니다.
-            Chatting chatMessage = new Chatting("0", chattingroom_pid, senderid, sendername, "[사진]", reader, getCurrentTime(), 1);
+            Chatting chatMessage = new Chatting("0", chattingroom_pid, senderid, sendername, "사진을 보냈습니다.", reader, getCurrentTime(), 1);
 
             // 이미지 경로를 추가합니다.
             chatMessage.setImagePath(imageFile.getAbsolutePath());
@@ -485,7 +573,7 @@ public class ChattingActivity extends AppCompatActivity {
             // 어댑터에 데이터가 추가되었음을 알립니다.
 
             // 리사이클러뷰를 가장 마지막 항목으로 스크롤합니다.
-            rv_chat_list.scrollToPosition(chatList.size() - 1);
+            scrollToBottom();
         }
     }
 
@@ -541,11 +629,6 @@ public class ChattingActivity extends AppCompatActivity {
             imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
         }
     }
-    private void scrollToBottom() {
-        if (chattingAdapter != null && chattingAdapter.getItemCount() > 0) {
-            rv_chat_list.scrollToPosition(chattingAdapter.getItemCount() - 1);
-        }
-    }
     private boolean isMyServiceRunning(Class<?> serviceClass) {
         ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
         if (manager != null) {
@@ -588,6 +671,7 @@ public class ChattingActivity extends AppCompatActivity {
             String action = intent.getAction();
             if ("com.example.NewProject.NEW_MESSAGE".equals(action)) {
                 String msg = intent.getStringExtra("message").trim();
+                System.out.println("ChattingActivity msg : " + msg);
                 addMessageToRecyclerView(msg);  // 차단 상태가 아니라면 메시지를 추가
             }
         }
@@ -600,10 +684,11 @@ public class ChattingActivity extends AppCompatActivity {
                 String[] parts = new String[0];
                 try {
                     // 메시지 파싱
-                    parts = message.split(":");
+                    parts = message.split("\\|");
                     String senderId = parts[0].trim();
                     String roomId = parts[1].trim();
                     String msg = parts.length > 3 ? parts[3].trim() : "";
+                    System.out.println("addMessageToRecyclerView msg : " + msg);
                     // 클라이언트 리스트 (콤마로 구분된 문자열)
                     String clients = parts.length > 4 ? parts[4].trim() : "";
                     clientList = new ArrayList<>(List.of(clients.split(",")));
@@ -612,6 +697,7 @@ public class ChattingActivity extends AppCompatActivity {
                     reader =  friend_pids.size() + 1  - clientList.size() ;
                     System.out.println("addMessageToRecyclerView reader : " + reader );
                     System.out.println("addMessageToRecyclerView clientList : " + clientList.size() );
+                    String senderName = pidNameMap.getOrDefault(senderId, "Unknown");
                     // 현재 채팅방에 해당하는 메시지인지 확인
                     if (roomId.equals(chattingroom_pid) && !senderId.equals(my_pid)) {
                         // 입장 메시지 처리
@@ -626,49 +712,90 @@ public class ChattingActivity extends AppCompatActivity {
                                 }
                             }
 
-                            // 어댑터 갱신 및 RecyclerView 새로고침
+                            // ProgressBar 표시
+                            showProgressBar(progressOverlay);
+
+                            // 현재 보이는 첫 번째 아이템의 위치와 오프셋 저장
+                            LinearLayoutManager layoutManager = (LinearLayoutManager) rv_chat_list.getLayoutManager();
+                            int firstVisiblePosition = layoutManager.findFirstVisibleItemPosition();
+                            View firstVisibleView = layoutManager.findViewByPosition(firstVisiblePosition);
+                            int offset = (firstVisibleView != null) ? firstVisibleView.getTop() : 0;
+
+                            // 어댑터 갱신
                             chattingAdapter = new ChattingAdapter(ChattingActivity.this, chatList, getApplicationContext(), my_pid, chattingroom_pid);
                             rv_chat_list.setAdapter(chattingAdapter);
-                            chattingAdapter.notifyDataSetChanged();
+                            chattingAdapter.notifyItemRangeChanged(0, chatList.size());
 
-                            // 퇴장 메시지 처리
-                        } else if (msg.equals("퇴장")) {
+                            // 어댑터 갱신 후 저장된 위치로 스크롤을 복원
+                            rv_chat_list.post(() -> {
+                                layoutManager.scrollToPositionWithOffset(firstVisiblePosition, offset);
+
+                                // ProgressBar 숨기기
+                                hideProgressBar(progressOverlay);
+                            });
+                        }
+                        else if (msg.equals("퇴장")) {
                             System.out.println("addMessageToRecyclerView clientList 퇴장 : " + clientList.size() );
                             // 일반 메시지 처리
-                        } else if (msg.startsWith("/9j/")) {
-                            String senderName = pidNameMap.getOrDefault(senderId, "Unknown");
-                            String base64String = msg;
+                        }else if (msg.startsWith("http://")) {
+                            System.out.println("msg : " + msg);
+                            String imageUrl = msg.trim();  // 이미지 경로 (HTTP URL)
 
-                            Bitmap decodedImage = decodeBase64ToBitmap(base64String);
-                            if (decodedImage != null) {
-                                // 파일로 저장 (원한다면)
-                                File imageFile = saveImageToFile(decodedImage);
-                                if (imageFile != null) {
-                                    addOtherImageToRecyclerView(imageFile, senderId, senderName);
-                                } else {
-                                    Log.e("ChattingActivity", "Failed to save image to file.");
+                            // 메시지를 받은 순서대로 저장하기 위한 큐를 선언 (리스트로도 가능)
+                            List<String> imageQueue = new ArrayList<>();
+                            imageQueue.add(imageUrl);  // 받은 이미지 URL을 큐에 추가
+
+                            // ProgressBar 표시
+                            runOnUiThread(() -> showProgressBar(findViewById(R.id.progress_overlay)));
+
+                            // 새 스레드로 이미지를 처리
+                            new Thread(() -> {
+                                try {
+                                    // 큐에서 이미지 URL을 꺼내옴
+                                    for (String queuedUrl : imageQueue) {
+                                        URL url = new URL(queuedUrl);
+                                        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                                        connection.setDoInput(true);
+                                        connection.connect();
+
+                                        // InputStream으로부터 이미지 읽기
+                                        InputStream input = connection.getInputStream();
+                                        Bitmap decodedImage = BitmapFactory.decodeStream(input);
+
+                                        if (decodedImage != null) {
+                                            // Bitmap을 File로 변환
+                                            File imageFile = bitmapToFile(decodedImage);
+
+                                            // UI 스레드에서 RecyclerView에 이미지 추가
+                                            runOnUiThread(() -> {
+                                                // 기존 메서드 사용 (File 타입을 넘김)
+                                                addOtherImageToRecyclerView(imageFile, senderId, senderName);
+                                            });
+                                        } else {
+                                            Log.e("ChattingActivity", "Failed to decode image from URL.");
+                                        }
+                                    }
+                                    // 큐 처리 후 비우기
+                                    imageQueue.clear();
+
+                                } catch (IOException e) {
+                                    Log.e("ChattingActivity", "Error fetching image: " + e.getMessage());
+                                } finally {
+                                    // ProgressBar 숨기기
+                                    runOnUiThread(() -> hideProgressBar(findViewById(R.id.progress_overlay)));
                                 }
-                            } else {
-                                Log.e("ChattingActivity", "Failed to decode Base64 image.");
-                            }
+                            }).start();
                         } else {
                             // pidNameMap에서 senderId에 해당하는 이름을 찾음
-                            String senderName = pidNameMap.getOrDefault(senderId, "Unknown");
-                            System.out.println("addMessageToRecyclerView" + msg);
-
-//                            num = friend_pids.size() + 1;
-
                             // 새로운 채팅 메시지 생성 및 추가
                             Chatting chatMessage = new Chatting("0", chattingroom_pid, senderId, senderName, msg, reader, getCurrentTime(), 1);
                             chatList.add(chatMessage);
-
                             // 어댑터 갱신 및 RecyclerView에 메시지 추가
                             chattingAdapter = new ChattingAdapter(ChattingActivity.this, chatList, getApplicationContext(), my_pid, chattingroom_pid);
                             rv_chat_list.setAdapter(chattingAdapter);
                             chattingAdapter.notifyItemInserted(chatList.size() - 1);
-
                             // RecyclerView를 최신 메시지 위치로 스크롤
-                            rv_chat_list.post(() -> rv_chat_list.scrollToPosition(chatList.size() - 1));
+                            scrollToBottom();
                         }
                     }
                 } catch (NumberFormatException e) {
@@ -677,6 +804,21 @@ public class ChattingActivity extends AppCompatActivity {
             }
         });
     }
+
+    // Bitmap을 File로 변환하는 함수
+    private File bitmapToFile(Bitmap bitmap) throws IOException {
+        // 임시 파일을 저장할 디렉토리 지정 (앱 전용 캐시 디렉토리 등)
+        File tempFile = new File(getCacheDir(), "temp_image_" + System.currentTimeMillis() + ".jpg");
+
+        // OutputStream을 통해 Bitmap을 파일로 저장
+        FileOutputStream out = new FileOutputStream(tempFile);
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
+        out.flush();
+        out.close();
+
+        return tempFile;
+    }
+
 
     private String getCurrentTime() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -688,8 +830,6 @@ public class ChattingActivity extends AppCompatActivity {
             return sdf.format(new Date());
         }
     }
-
-
     private void getData(String my_pid, String friend_pid) {
         int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
         if (status == NetworkStatus.TYPE_NOT_CONNECTED) {
@@ -872,9 +1012,7 @@ public class ChattingActivity extends AppCompatActivity {
             chattingAdapter.notifyItemInserted(chatList.size() - 1);
 
             // RecyclerView를 최신 메시지 위치로 스크롤
-            rv_chat_list.post(() -> {
-                rv_chat_list.scrollToPosition(chatList.size() - 1);
-            });
+            scrollToBottom();
 
         });
         // 메시지를 서버로 전송하는 로직
@@ -1070,6 +1208,22 @@ public class ChattingActivity extends AppCompatActivity {
 
                             boolean success = jsonResponse.getBoolean("success");
                             String message = jsonResponse.getString("message");
+                            String imagePathsArray = jsonResponse.getString("image_path");
+                            System.out.println("imagePathsArray : " + imagePathsArray);
+
+                            // 이미지 경로 배열을 문자열로 변환하여 처리
+//                            List<String> imagePathsList = new ArrayList<>();
+//                            for (int i = 0; i < imagePathsArray.length(); i++) {
+//                                imagePathsList.add(imagePathsArray);
+//                            }
+//
+//                            // 이미지를 서버에서 받은 후, 클라이언트로 전송
+//                            String concatenatedImagePaths = TextUtils.join(",", imagePathsList);
+//                            System.out.println(concatenatedImagePaths);
+                            if(!imagePathsArray.equals("null")){
+                                sendMessage(my_pid + "|" + chattingroom_pid + "|" + roomname + "|" + imagePathsArray);
+                            }
+
 
                             // 응답에 따라 처리
                             if (success) {
@@ -1182,9 +1336,8 @@ public class ChattingActivity extends AppCompatActivity {
                                 // 처음 로드될 때만 가장 아래로 스크롤
                                 if (isFirstLoad) {
                                     // 스크롤을 맨 아래로 확실하게 이동하기 위해 약간의 지연을 둡니다.
-                                    rv_chat_list.postDelayed(() -> {
-                                        rv_chat_list.scrollToPosition(chatList.size() + 1);
-                                    }, 100);  // 100ms 정도의 지연을 줍니다.
+                                    chattingAdapter.notifyItemInserted(chatList.size() - 1);
+                                    scrollToBottom();
                                     isFirstLoad = false;  // 이후로는 자동 스크롤하지 않도록 설정
                                 } else {
                                     // 기존 위치로 복원
