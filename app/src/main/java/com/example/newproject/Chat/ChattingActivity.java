@@ -26,6 +26,7 @@ import android.graphics.Matrix;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.provider.OpenableColumns;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
@@ -59,6 +60,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.LocalDateTime;
@@ -306,13 +308,12 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
         // ContentResolver를 사용하여 이미지 URI를 쿼리
         String[] projection = {MediaStore.Images.Media._ID, MediaStore.Images.Media.DISPLAY_NAME};
         Uri imagesUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
-
         Cursor cursor = getContentResolver().query(
-                imagesUri,
-                projection,
-                null,
-                null,
-                MediaStore.Images.Media.DATE_ADDED + " DESC"  // 최근 추가된 이미지부터 가져오기
+                imagesUri,                   // 조회할 URI (갤러리의 이미지 데이터베이스)
+                projection,                  // 반환할 컬럼 (ID와 이미지 이름)
+                null,                        // WHERE 절 (필터링 조건이 없으므로 전체를 조회)
+                null,                        // WHERE 절에서 사용할 파라미터 값
+                MediaStore.Images.Media.DATE_ADDED + " DESC" // 정렬 조건 (가장 최근에 추가된 이미지부터)
         );
 
         if (cursor != null) {
@@ -361,45 +362,34 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
 
     @Override
     public void onImageClick(ArrayList<Uri> selectedImages) {
-        // 선택된 이미지를 Bitmap 리스트로 변환
-        List<Bitmap> imageBitmaps = new ArrayList<>();
-        System.out.println(selectedImages.size());
 
+        // 선택된 이미지가 없을 경우 전송 버튼을 숨김
         if (selectedImages.size() == 0) {
-            ib_send_talk.setVisibility(View.GONE);
+            ib_send_talk.setVisibility(View.GONE);  // 전송 버튼 숨기기
         } else {
-            ib_send_talk.setVisibility(View.VISIBLE);
-
-            // 각 Uri를 Bitmap으로 변환하여 리스트에 추가
-            for (Uri imageUri : selectedImages) {
-                try {
-                    Bitmap imageBitmap = uriToBitmap(imageUri);
-                    imageBitmaps.add(imageBitmap);  // 변환된 Bitmap을 리스트에 추가
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    Toast.makeText(this, "이미지 처리 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show();
-                }
-            }
-
+            // 선택된 이미지가 있을 경우 전송 버튼을 보이게 함
+            ib_send_talk.setVisibility(View.VISIBLE);  // 전송 버튼 보이기
             // 전송 버튼에 대한 클릭 리스너 설정
             ib_send_talk.setOnClickListener(v -> {
-                // ProgressBar를 표시
+                // ProgressBar를 표시 (이미지 전송 중임을 사용자에게 알림)
                 showProgressBar(progressOverlay);
 
-                // 선택된 모든 이미지를 전송 (선택한 순서대로)
+                // 선택된 모든 이미지를 서버로 전송 (이미지 전송과 함께 메시지 내용도 전송)
                 sendChatMessageWithImages(et_talk.getText().toString(), selectedImages);
 
-                ll_image_album.setVisibility(View.GONE);
-                ib_clear_file.setVisibility(View.GONE);
-                ib_add_file.setVisibility(View.VISIBLE);
-                et_talk.setVisibility(View.VISIBLE);
-                ib_send_talk.setVisibility(View.GONE);
+                // 이미지 앨범과 관련된 UI 요소들 숨김
+                ll_image_album.setVisibility(View.GONE);  // 이미지 앨범 뷰 숨기기
+                ib_clear_file.setVisibility(View.GONE);  // 파일 초기화 버튼 숨기기
+                ib_add_file.setVisibility(View.VISIBLE);  // 파일 추가 버튼 다시 보이기
+                et_talk.setVisibility(View.VISIBLE);  // 채팅 입력창 다시 보이기
+                ib_send_talk.setVisibility(View.GONE);  // 전송 버튼 숨기기
 
-                // 전송이 완료되면 ProgressBar를 숨김
+                // 전송이 완료되면 ProgressBar를 숨김 (UI 스레드에서 실행)
                 runOnUiThread(() -> hideProgressBar(progressOverlay));
             });
         }
     }
+
 
     // Uri를 Bitmap으로 변환하는 메서드
     private Bitmap uriToBitmap(Uri imageUri) throws IOException {
@@ -413,28 +403,6 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
         }
     }
     // EXIF 데이터를 확인하고 필요시 이미지를 회전시키는 함수
-    private Bitmap rotateImageIfRequired(Context context, Bitmap img, Uri selectedImage) throws IOException {
-        InputStream input = context.getContentResolver().openInputStream(selectedImage);
-        ExifInterface ei;
-        if (Build.VERSION.SDK_INT > 23) {
-            ei = new ExifInterface(input);
-        } else {
-            ei = new ExifInterface(selectedImage.getPath());
-        }
-
-        int orientation = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
-
-        switch (orientation) {
-            case ExifInterface.ORIENTATION_ROTATE_90:
-                return rotateImage(img, 90);
-            case ExifInterface.ORIENTATION_ROTATE_180:
-                return rotateImage(img, 180);
-            case ExifInterface.ORIENTATION_ROTATE_270:
-                return rotateImage(img, 270);
-            default:
-                return img;
-        }
-    }
 
     // 이미지를 회전시키는 함수
     private Bitmap rotateImage(Bitmap img, int degree) {
@@ -477,60 +445,72 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
     }
 
     private void sendChatMessageWithImages(String message, List<Uri> selectedImages) {
-        List<File> imageFiles = new ArrayList<>();
-
         // 선택된 이미지를 Uri 순서대로 처리
         for (Uri imageUri : selectedImages) {
             try {
-                // 이미지를 Bitmap으로 변환
-                Bitmap imageBitmap = uriToBitmap(imageUri);
-
-                // 이미지 파일로 변환 후 리스트에 추가
-                File imageFile = saveImageToFile(imageBitmap);
-                imageFiles.add(imageFile);
-
+                // Uri에서 바로 파일로 변환
+                File imageFile = uriToFile(imageUri);
                 // 선택한 이미지의 순서대로 RecyclerView에 추가
                 addImageToRecyclerView(imageFile);
+                //아파치 서버로 전송
                 uploadMessageAndImageToServer("사진을 보냈습니다.", imageFile);
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-
-        // 서버로 파일을 순서대로 전송
-
         // 메시지가 있을 경우 추가로 처리
         if (!message.isEmpty()) {
             onSendTalk(message, my_pid, friend_pids); // 메시지 추가
         }
     }
 
-
-
-
-
-
-    private String encodeImageToBase64(Bitmap imageBitmap) {
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        imageBitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
-        byte[] imageBytes = byteArrayOutputStream.toByteArray();
-        // Base64로 인코딩
-        return Base64.encodeToString(imageBytes, Base64.DEFAULT);
-    }
-    private Bitmap decodeBase64ToBitmap(String base64String) {
-        try {
-            // Base64 문자열에서 줄바꿈이나 공백 제거
-            base64String = base64String.replace("\n", "").replace("\r", "");
-
-            // Base64로부터 바이트 배열을 디코딩
-            byte[] decodedBytes = Base64.decode(base64String, Base64.DEFAULT);
-
-            // 바이트 배열을 비트맵으로 변환
-            return BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
-        } catch (IllegalArgumentException e) {
-            Log.e("ChattingActivity", "Base64 decoding failed", e);
-            return null;
+    private File uriToFile(Uri uri) throws IOException {
+        // ContentResolver를 사용 Uri로부터 파일의 이름을 가져옴
+        String fileName = getFileName(uri); // 파일 이름을 얻는 메소드 (따로 구현되어야 함)
+        // 캐시 디렉토리 내에 파일 이름을 사용 새로운 파일을 생성
+        File file = new File(getCacheDir(), fileName);
+        // try-with-resources 구문을 사용 InputStream과 OutputStream을 열어, 자동으로 닫히도록 설정
+        try (InputStream inputStream = getContentResolver().openInputStream(uri);
+             OutputStream outputStream = new FileOutputStream(file)) {
+            // 파일을 임시로 읽을 버퍼 변수
+            byte[] buffer = new byte[1024];
+            int length;
+            // InputStream에서 데이터를 읽어들인 후, OutputStream을 통해 파일에 기록
+            // 더 이상 읽을 데이터가 없으면 루프가 종료됨
+            while ((length = inputStream.read(buffer)) > 0) {
+                outputStream.write(buffer, 0, length);
+            }
         }
+        // 파일로 변환된 결과를 반환
+        return file;
+    }
+
+    private String getFileName(Uri uri) {
+        String result = null;
+
+        // Uri가 content 스키마를 사용할 때 처리
+        if (uri.getScheme().equals("content")) {
+            try (Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    // DISPLAY_NAME 컬럼이 있는지 확인
+                    int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                    if (nameIndex != -1) {
+                        result = cursor.getString(nameIndex);
+                    }
+                }
+            }
+        }
+
+        // 만약 DISPLAY_NAME을 찾지 못하면 경로에서 이름을 추출
+        if (result == null) {
+            result = uri.getPath();
+            int cut = result != null ? result.lastIndexOf('/') : -1;
+            if (cut != -1) {
+                result = result.substring(cut + 1);
+            }
+        }
+
+        return result;
     }
 
     // 리사이클러뷰에 이미지와 함께 데이터를 추가하는 메서드
@@ -740,14 +720,11 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                         }else if (msg.startsWith("http://")) {
                             System.out.println("msg : " + msg);
                             String imageUrl = msg.trim();  // 이미지 경로 (HTTP URL)
-
                             // 메시지를 받은 순서대로 저장하기 위한 큐를 선언 (리스트로도 가능)
                             List<String> imageQueue = new ArrayList<>();
                             imageQueue.add(imageUrl);  // 받은 이미지 URL을 큐에 추가
-
                             // ProgressBar 표시
                             runOnUiThread(() -> showProgressBar(findViewById(R.id.progress_overlay)));
-
                             // 새 스레드로 이미지를 처리
                             new Thread(() -> {
                                 try {
@@ -757,15 +734,12 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                                         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                                         connection.setDoInput(true);
                                         connection.connect();
-
                                         // InputStream으로부터 이미지 읽기
                                         InputStream input = connection.getInputStream();
                                         Bitmap decodedImage = BitmapFactory.decodeStream(input);
-
                                         if (decodedImage != null) {
                                             // Bitmap을 File로 변환
                                             File imageFile = bitmapToFile(decodedImage);
-
                                             // UI 스레드에서 RecyclerView에 이미지 추가
                                             runOnUiThread(() -> {
                                                 // 기존 메서드 사용 (File 타입을 넘김)
