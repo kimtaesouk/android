@@ -146,8 +146,11 @@ public class SocketService extends Service {
                 roomNotificationStatus.put(roomId, true);   // 퇴장 시 알림 활성화
                 Log.d("SocketService", "User has exited room " + roomId + ", enabling notifications for this room.");
             }
+        } else if (msg.equals("only") || msg.equals("all")) {
+            Log.d("SocketService", "No notification for message: " + msg);
+            return; // 알림을 보내지 않고 반환
         } else if (msg.startsWith("http://")) {
-            msg = "[사진]";
+            msg = "사진을 전송했습니다.";
         }
 
         // 알림 상태에 따라 알림 표시 여부 결정

@@ -17,12 +17,8 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Rect;
 import android.icu.text.SimpleDateFormat;
-import android.media.ExifInterface;
 import android.net.Uri;
-import android.graphics.Matrix;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -30,10 +26,8 @@ import android.provider.OpenableColumns;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
-import android.util.Base64;
 import android.util.Log;
 import android.view.View;
-import android.view.ViewTreeObserver;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -55,7 +49,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -66,13 +59,11 @@ import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
-import java.util.stream.Collectors;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -114,7 +105,6 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chatting);
-
         // XML 레이아웃에서 UI 요소를 연결
         tv_friend_name = findViewById(R.id.tv_friend_name);
         et_talk = findViewById(R.id.et_talk);
@@ -131,11 +121,9 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
         ib_clear_file = findViewById(R.id.ib_clear_file);
         ib_chat_camara = findViewById(R.id.ib_chat_camara);
         ib_chat_album = findViewById(R.id.ib_chat_album);
-
         rv_image_album = findViewById(R.id.rv_image_album);
         ll_image_album = findViewById(R.id.ll_image_album);
         progressBar = findViewById(R.id.progress_bar);
-
         progressOverlay = findViewById(R.id.progress_overlay);
 
         LinearLayoutManager layoutManager = new LinearLayoutManager(getApplicationContext());
@@ -389,30 +377,12 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
             });
         }
     }
-
-
-    // Uri를 Bitmap으로 변환하는 메서드
-    private Bitmap uriToBitmap(Uri imageUri) throws IOException {
-        return MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri);
-    }
-
     private void openCamera() {
         Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         if (cameraIntent.resolveActivity(getPackageManager()) != null) {
             startActivityForResult(cameraIntent, CAMERA_INTENT_REQUEST_CODE);
         }
     }
-    // EXIF 데이터를 확인하고 필요시 이미지를 회전시키는 함수
-
-    // 이미지를 회전시키는 함수
-    private Bitmap rotateImage(Bitmap img, int degree) {
-        Matrix matrix = new Matrix();
-        matrix.postRotate(degree);
-        Bitmap rotatedImg = Bitmap.createBitmap(img, 0, 0, img.getWidth(), img.getHeight(), matrix, true);
-        img.recycle();
-        return rotatedImg;
-    }
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -448,12 +418,13 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
         // 선택된 이미지를 Uri 순서대로 처리
         for (Uri imageUri : selectedImages) {
             try {
+                String tempPid = "temp_" + System.currentTimeMillis(); // 임시로 고유한 PID 생성
                 // Uri에서 바로 파일로 변환
                 File imageFile = uriToFile(imageUri);
                 // 선택한 이미지의 순서대로 RecyclerView에 추가
-                addImageToRecyclerView(imageFile);
+                addImageToRecyclerView(imageFile, tempPid);
                 //아파치 서버로 전송
-                uploadMessageAndImageToServer("사진을 보냈습니다.", imageFile);
+                uploadMessageAndImageToServer("사진을 보냈습니다.", imageFile, tempPid);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -463,6 +434,19 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
             onSendTalk(message, my_pid, friend_pids); // 메시지 추가
         }
     }
+
+    private File inputStreamToFile(InputStream inputStream, String fileName) throws IOException {
+        File file = new File(getCacheDir(), fileName);
+        try (FileOutputStream outputStream = new FileOutputStream(file)) {
+            byte[] buffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+            }
+        }
+        return file;
+    }
+
 
     private File uriToFile(Uri uri) throws IOException {
         // ContentResolver를 사용 Uri로부터 파일의 이름을 가져옴
@@ -514,10 +498,10 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
     }
 
     // 리사이클러뷰에 이미지와 함께 데이터를 추가하는 메서드
-    private void addImageToRecyclerView(File imageFile) {
+    private void addImageToRecyclerView(File imageFile, String tempPid) {
         if (imageFile != null) {
             // 새로운 채팅 메시지 객체를 생성
-            Chatting chatMessage = new Chatting("0", chattingroom_pid, my_pid, "name", "사진을 보냈습니다.", reader, getCurrentTime(), 1);
+            Chatting chatMessage = new Chatting(tempPid, chattingroom_pid, my_pid, "name", "사진을 보냈습니다.", reader, getCurrentTime(), 1);
 
             // 이미지 경로를 추가
             chatMessage.setImagePath(imageFile.getAbsolutePath());
@@ -525,14 +509,59 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
             // UI 스레드에서 RecyclerView에 추가
             runOnUiThread(() -> {
                 chatList.add(chatMessage);
-                chattingAdapter = new ChattingAdapter(this, chatList, getApplicationContext(), my_pid, chattingroom_pid);
-                rv_chat_list.setAdapter(chattingAdapter);
+                initChattingAdapter();
                 chattingAdapter.notifyItemInserted(chatList.size() - 1);
                 scrollToBottom();
                 hideProgressBar(progressOverlay);
             });
         }
     }
+
+    private void initChattingAdapter() {
+        chattingAdapter = new ChattingAdapter(
+                ChattingActivity.this,
+                chatList,
+                getApplicationContext(),
+                my_pid,
+                chattingroom_pid,
+                (chatPid, option) -> onChatDeleted(chatPid, option)  // 삭제 콜백 처리
+        );
+        rv_chat_list.setAdapter(chattingAdapter);
+    }
+    // 채팅 삭제 시 처리 로직
+    private void onChatDeleted(String chatPid, String option) {
+        // chatPid로 해당 메시지의 위치를 찾음
+        int position = -1;
+        for (int i = 0; i < chatList.size(); i++) {
+            if (chatList.get(i).getPid().equals(chatPid)) {
+                position = i;
+                break;
+            }
+        }
+
+        // 메시지를 찾은 경우 처리
+        if (position != -1) {
+            if (option.equals("all")) {
+                // 메시지 내용을 "삭제된 메시지입니다"로 변경
+                chatList.get(position).setMsg("삭제된 메시지입니다");
+
+                // 특정 아이템만 UI를 갱신
+                getData2(chattingroom_pid);
+            } else {
+                // 메시지를 리스트에서 제거하고 UI에서 갱신
+                chatList.remove(position);
+                chattingAdapter.notifyItemRemoved(position);
+                chattingAdapter.notifyItemRangeChanged(position, chatList.size());
+
+                getData2(chattingroom_pid);
+            }
+            sendMessage(my_pid + "|" + chattingroom_pid + "|" + roomname + "|" + option);
+        } else {
+            // 만약 chatPid로 메시지를 찾지 못했을 때 처리
+            Log.e("ChattingActivity", "해당 메시지를 찾을 수 없습니다: " + chatPid);
+        }
+    }
+
 
 
     private void addOtherImageToRecyclerView(File imageFile, String senderid, String sendername) {
@@ -546,8 +575,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
             // 채팅 리스트에 새 메시지를 추가합니다.
             chatList.add(chatMessage);
 
-            chattingAdapter = new ChattingAdapter(this, chatList, getApplicationContext(), my_pid, chattingroom_pid);
-            rv_chat_list.setAdapter(chattingAdapter);
+            initChattingAdapter();
             chattingAdapter.notifyItemInserted(chatList.size() - 1);
 
             // 어댑터에 데이터가 추가되었음을 알립니다.
@@ -684,17 +712,14 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                         if (msg.equals("입장")) {
                             System.out.println("message senderId : " + senderId);
                             System.out.println("addMessageToRecyclerView 입장 friend_pids수 : " + friend_pids.size());
-
                             // 모든 메시지의 reader_count 업데이트
                             for (Chatting chat : chatList) {
                                 if (chat.getCount() != 0) {
                                     chat.setCount(reader);
                                 }
                             }
-
                             // ProgressBar 표시
                             showProgressBar(progressOverlay);
-
                             // 현재 보이는 첫 번째 아이템의 위치와 오프셋 저장
                             LinearLayoutManager layoutManager = (LinearLayoutManager) rv_chat_list.getLayoutManager();
                             int firstVisiblePosition = layoutManager.findFirstVisibleItemPosition();
@@ -702,8 +727,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                             int offset = (firstVisibleView != null) ? firstVisibleView.getTop() : 0;
 
                             // 어댑터 갱신
-                            chattingAdapter = new ChattingAdapter(ChattingActivity.this, chatList, getApplicationContext(), my_pid, chattingroom_pid);
-                            rv_chat_list.setAdapter(chattingAdapter);
+                            initChattingAdapter();
                             chattingAdapter.notifyItemRangeChanged(0, chatList.size());
 
                             // 어댑터 갱신 후 저장된 위치로 스크롤을 복원
@@ -713,14 +737,15 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                                 // ProgressBar 숨기기
                                 hideProgressBar(progressOverlay);
                             });
-                        }
-                        else if (msg.equals("퇴장")) {
+                        } else if (msg.equals("퇴장")) {
                             System.out.println("addMessageToRecyclerView clientList 퇴장 : " + clientList.size() );
                             // 일반 메시지 처리
-                        }else if (msg.startsWith("http://")) {
+                        } else if (msg.equals("only") || msg.equals("all") ) {
+                            getData2(chattingroom_pid);
+                        } else if (msg.startsWith("http://49.247.32.169/NewProject/uploads/")) {
                             System.out.println("msg : " + msg);
                             String imageUrl = msg.trim();  // 이미지 경로 (HTTP URL)
-                            // 메시지를 받은 순서대로 저장하기 위한 큐를 선언 (리스트로도 가능)
+                            // 메시지를 받은 순서대로 저장하기 위한 큐를 선언
                             List<String> imageQueue = new ArrayList<>();
                             imageQueue.add(imageUrl);  // 받은 이미지 URL을 큐에 추가
                             // ProgressBar 표시
@@ -736,18 +761,15 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                                         connection.connect();
                                         // InputStream으로부터 이미지 읽기
                                         InputStream input = connection.getInputStream();
-                                        Bitmap decodedImage = BitmapFactory.decodeStream(input);
-                                        if (decodedImage != null) {
-                                            // Bitmap을 File로 변환
-                                            File imageFile = bitmapToFile(decodedImage);
-                                            // UI 스레드에서 RecyclerView에 이미지 추가
-                                            runOnUiThread(() -> {
-                                                // 기존 메서드 사용 (File 타입을 넘김)
-                                                addOtherImageToRecyclerView(imageFile, senderId, senderName);
-                                            });
-                                        } else {
-                                            Log.e("ChattingActivity", "Failed to decode image from URL.");
-                                        }
+                                        // InputStream을 파일로 저장
+                                        File imageFile = inputStreamToFile(input, "downloaded_image.jpg");
+                                        // UI 스레드에서 RecyclerView에 이미지 추가
+                                        runOnUiThread(() -> {
+                                            // 기존 메서드 사용 (File 타입을 넘김)
+                                            addOtherImageToRecyclerView(imageFile, senderId, senderName);
+                                        });
+
+                                        input.close();  // InputStream 닫기
                                     }
                                     // 큐 처리 후 비우기
                                     imageQueue.clear();
@@ -765,8 +787,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                             Chatting chatMessage = new Chatting("0", chattingroom_pid, senderId, senderName, msg, reader, getCurrentTime(), 1);
                             chatList.add(chatMessage);
                             // 어댑터 갱신 및 RecyclerView에 메시지 추가
-                            chattingAdapter = new ChattingAdapter(ChattingActivity.this, chatList, getApplicationContext(), my_pid, chattingroom_pid);
-                            rv_chat_list.setAdapter(chattingAdapter);
+                            initChattingAdapter();
                             chattingAdapter.notifyItemInserted(chatList.size() - 1);
                             // RecyclerView를 최신 메시지 위치로 스크롤
                             scrollToBottom();
@@ -778,22 +799,6 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
             }
         });
     }
-
-    // Bitmap을 File로 변환하는 함수
-    private File bitmapToFile(Bitmap bitmap) throws IOException {
-        // 임시 파일을 저장할 디렉토리 지정 (앱 전용 캐시 디렉토리 등)
-        File tempFile = new File(getCacheDir(), "temp_image_" + System.currentTimeMillis() + ".jpg");
-
-        // OutputStream을 통해 Bitmap을 파일로 저장
-        FileOutputStream out = new FileOutputStream(tempFile);
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
-        out.flush();
-        out.close();
-
-        return tempFile;
-    }
-
-
     private String getCurrentTime() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             LocalDateTime now = LocalDateTime.now();
@@ -970,29 +975,26 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
     }
 
     private void onSendTalk(String msg, String my_pid, ArrayList<String> friend_pids) {
-        // 새로운 메시지 생성
-        Chatting chatMessage = new Chatting("0", chattingroom_pid, my_pid, "name", msg, reader, getCurrentTime(), 1);
+        // 임시 PID를 생성 (리스트에 메시지를 추가할 때 사용할 임시 PID)
+        String tempPid = "temp_" + System.currentTimeMillis(); // 임시로 고유한 PID 생성
+
+        // 새로운 채팅 메시지 생성 (임시 PID 사용)
+        Chatting chatMessage = new Chatting(tempPid, chattingroom_pid, my_pid, "name", msg, reader, getCurrentTime(), 1);
 
         // UI 스레드에서 데이터를 추가하고 RecyclerView 갱신
         runOnUiThread(() -> {
             // 리스트에 메시지 추가
-            // 리스트에 메시지 추가
             chatList.add(chatMessage);
-
-            chattingAdapter = new ChattingAdapter(this, chatList, getApplicationContext(), my_pid, chattingroom_pid);
-            rv_chat_list.setAdapter(chattingAdapter);
-
+            initChattingAdapter();
             // 메시지를 리스트에 추가
             chattingAdapter.notifyItemInserted(chatList.size() - 1);
-
             // RecyclerView를 최신 메시지 위치로 스크롤
             scrollToBottom();
-
         });
         // 메시지를 서버로 전송하는 로직
         if (!chatList.isEmpty()) {
             sendMessage(my_pid + "|" + chattingroom_pid + "|" + roomname + "|" + msg);
-            uploadMessageAndImageToServer (msg, null);
+            uploadMessageAndImageToServer(msg, null, tempPid); // 임시 PID를 함께 전달
             et_talk.setText(""); // 입력창 초기화
         }
     }
@@ -1133,17 +1135,17 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
         });
     }
     //ib_send_talk클릭했을때 my_pid, 친구pid , massage
-    private void uploadMessageAndImageToServer(String message, File imageFile) {
+    private void uploadMessageAndImageToServer(String message, File imageFile, String tempPid) {
         System.out.println("isBlocked : " + String.valueOf(isBlocked));
         String friendPidsString = TextUtils.join(",", friend_pids);
-
         OkHttpClient client = new OkHttpClient();
+
         MultipartBody.Builder builder = new MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
                 .addFormDataPart("message", message)
                 .addFormDataPart("my_pid", my_pid)
                 .addFormDataPart("friend_pids", friendPidsString)
-                .addFormDataPart("isBlocked" , String.valueOf(isBlocked))
+                .addFormDataPart("isBlocked", String.valueOf(isBlocked))
                 .addFormDataPart("chattingroom_pid", chattingroom_pid);
 
         if (imageFile != null) {
@@ -1161,46 +1163,33 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
             @Override
             public void onFailure(Call call, IOException e) {
                 e.printStackTrace();
-                runOnUiThread(() -> Toast.makeText(ChattingActivity.this, "메시지 전송 실패", Toast.LENGTH_SHORT).show());
             }
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
-                // 서버로부터 받은 응답 처리
                 if (response.isSuccessful()) {
-                    // 서버 응답 내용을 문자열로 변환
                     String responseData = response.body().string();
-
-                    // 서버 응답을 로그로 출력하여 확인
                     Log.d("ChattingActivity", "Server Response: " + responseData);
-
                     runOnUiThread(() -> {
-                        // 서버에서 받은 응답을 처리
                         try {
-                            // 서버 응답이 JSON 형태라면 JSONObject로 파싱
                             JSONObject jsonResponse = new JSONObject(responseData);
-
                             boolean success = jsonResponse.getBoolean("success");
-                            String message = jsonResponse.getString("message");
-                            String imagePathsArray = jsonResponse.getString("image_path");
-                            System.out.println("imagePathsArray : " + imagePathsArray);
-
-                            // 이미지 경로 배열을 문자열로 변환하여 처리
-//                            List<String> imagePathsList = new ArrayList<>();
-//                            for (int i = 0; i < imagePathsArray.length(); i++) {
-//                                imagePathsList.add(imagePathsArray);
-//                            }
-//
-//                            // 이미지를 서버에서 받은 후, 클라이언트로 전송
-//                            String concatenatedImagePaths = TextUtils.join(",", imagePathsList);
-//                            System.out.println(concatenatedImagePaths);
-                            if(!imagePathsArray.equals("null")){
-                                sendMessage(my_pid + "|" + chattingroom_pid + "|" + roomname + "|" + imagePathsArray);
-                            }
-
-
-                            // 응답에 따라 처리
                             if (success) {
+                                String chatting_pid = jsonResponse.getString("chatting_pid");
+
+                                // 임시 PID를 사용하여 리스트에서 해당 메시지를 찾아 실제 PID로 업데이트
+                                for (Chatting chat : chatList) {
+                                    if (chat.getPid().equals(tempPid)) {
+                                        chat.setPid(chatting_pid); // 실제 PID로 업데이트
+                                        chattingAdapter.notifyDataSetChanged(); // 리스트 갱신
+                                        break;
+                                    }
+                                }
+
+                                String imagePathsArray = jsonResponse.getString("image_path");
+                                if (!imagePathsArray.equals("null")) {
+                                    sendMessage(my_pid + "|" + chattingroom_pid + "|" + roomname + "|" + imagePathsArray);
+                                }
                             } else {
                                 Toast.makeText(ChattingActivity.this, "메시지 전송 실패: " + message, Toast.LENGTH_SHORT).show();
                             }
@@ -1215,7 +1204,6 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
             }
         });
     }
-
     private void getData2(String room_pid) {
         int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
         if (status == NetworkStatus.TYPE_NOT_CONNECTED) {
@@ -1295,9 +1283,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                                 chatList.addAll(0, newItems);
 
                                 // chattingAdapter 설정 및 RecyclerView에 적용
-                                chattingAdapter = new ChattingAdapter(ChattingActivity.this, chatList, getApplicationContext(), my_pid, chattingroom_pid);
-                                rv_chat_list.setAdapter(chattingAdapter);
-
+                                initChattingAdapter();
                                 // JSONObject에서 "names" 객체를 가져와 pidNameMap에 추가
                                 JSONObject namesObject = jsonResponse.getJSONObject("names");
                                 Iterator<String> keys = namesObject.keys();
