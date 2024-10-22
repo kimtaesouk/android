@@ -35,8 +35,8 @@
             android:exported="false" />
         <activity
             android:name=".Chat.ChattingOptionActivity"
-            android:exported="false"
-            android:theme="@style/TransparentActivity" />
+            android:theme="@style/DialogTheme">
+        </activity>
         <activity
             android:name=".Chat.ChattingActivity"
             android:windowSoftInputMode="adjustResize">
