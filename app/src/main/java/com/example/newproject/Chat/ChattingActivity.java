@@ -192,6 +192,19 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
             ib_clear_file.setVisibility(View.VISIBLE);
         });
 
+        ib_room_option.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(getApplicationContext() , ChattingOptionActivity.class);
+                intent.putExtra("roomname" ,  roomname);
+                intent.putExtra("my_pid" ,  my_pid);
+                intent.putExtra("friend_pids" , friend_pids);
+                intent.putExtra("chattingroom_pid" , chattingroom_pid);
+                startActivity(intent);
+                overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+            }
+        });
+
         ib_clear_file.setOnClickListener(v -> {
             ll_add_file.setVisibility(View.GONE);
             ib_clear_file.setVisibility(View.GONE);
@@ -301,7 +314,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                 projection,                  // 반환할 컬럼 (ID와 이미지 이름)
                 null,                        // WHERE 절 (필터링 조건이 없으므로 전체를 조회)
                 null,                        // WHERE 절에서 사용할 파라미터 값
-                MediaStore.Images.Media.DATE_ADDED + " DESC" // 정렬 조건 (가장 최근에 추가된 이미지부터)
+                MediaStore.Images.Media.DATE_ADDED + "DESC" // 정렬 조건 (가장 최근에 추가된 이미지부터)
         );
 
         if (cursor != null) {
@@ -936,7 +949,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
     }
 
     private void onAddFriendClick(String f_pid) {
-        // 친구 추가 버튼 클릭 시 실행될 코드
+        // 친구 추가 버튼 클릭 시 실행될 코���
         setData(my_pid, friend_pids.get(0));
     }
 

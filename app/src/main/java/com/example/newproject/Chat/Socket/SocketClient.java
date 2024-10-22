@@ -9,39 +9,42 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 
+// SocketClient 클래스는 비동기적으로 서버와의 소켓 통신을 관리합니다.
 public class SocketClient extends AsyncTask<Void, Void, Void> {
-    private String serverIP = "192.168.0.13"; // 서버 IP를 적절히 변경하세요.
-    private int serverPort = 8080; // 사용하는 포트로 변경하세요.
-    private String roompid;
-    private String mypid;
-    private String roomname;
-    private Callback callback;
-    private boolean isRunning = true;
-    private PrintWriter out;
-    private BufferedReader in;
-    private Socket socket;
-
+    private String serverIP = "192.168.0.13"; // 서버 IP 주소
+    private int serverPort = 8080; // 서버 포트 번호
+    private String roompid; // 방 ID
+    private String mypid; // 사용자 ID
+    private String roomname; // 방 이름
+    private Callback callback; // 메시지 수신 시 호출되는 콜백 인터페이스
+    private boolean isRunning = true; // 소켓 통신이 실행 중인지 여부
+    private PrintWriter out; // 서버로 메시지를 전송하기 위한 PrintWriter
+    private BufferedReader in; // 서버로부터 메시지를 수신하기 위한 BufferedReader
+    private Socket socket; // 서버와의 소켓 연결
     private static final Object lock = new Object(); // 동기화를 위한 락 객체
 
+    // 메시지 수신 시 호출되는 콜백 인터페이스 정의
     public interface Callback {
         void onMessageReceived(String message);
     }
 
-    public SocketClient(String mypid ,Callback callback) {
-        this.roompid = roompid;
-        this.mypid = mypid;
-        this.roomname = roomname;
-        this.callback = callback;
+    // SocketClient 생성자
+    public SocketClient(String mypid, Callback callback) {
+        this.roompid = roompid; // 방 ID 설정
+        this.mypid = mypid; // 사용자 ID 설정
+        this.roomname = roomname; // 방 이름 설정
+        this.callback = callback; // 콜백 설정
     }
 
+    // 백그라운드에서 소켓 연결을 설정하고 메시지를 수신하는 메서드
     @Override
     protected Void doInBackground(Void... voids) {
         try {
             // 이미 소켓이 열려있으면 다시 열지 않음
             if (socket == null || socket.isClosed()) {
-                socket = new Socket(serverIP, serverPort);
-                out = new PrintWriter(socket.getOutputStream(), true);
-                in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                socket = new Socket(serverIP, serverPort); // 서버에 소켓 연결
+                out = new PrintWriter(socket.getOutputStream(), true); // 출력 스트림 초기화
+                in = new BufferedReader(new InputStreamReader(socket.getInputStream())); // 입력 스트림 초기화
 
                 // 서버에 소켓 열림 메시지를 보냄
                 sendMessage(mypid + "|" + roompid + "|" + roomname + "|" + "socket_open");
@@ -52,7 +55,7 @@ public class SocketClient extends AsyncTask<Void, Void, Void> {
                 while (isRunning && (receivedMessage = in.readLine()) != null) {
                     Log.d("SocketClient", "Message received: " + receivedMessage);
                     if (callback != null) {
-                        callback.onMessageReceived(receivedMessage);
+                        callback.onMessageReceived(receivedMessage); // 메시지 수신 시 콜백 호출
                     }
                 }
             }
@@ -69,8 +72,8 @@ public class SocketClient extends AsyncTask<Void, Void, Void> {
         new Thread(() -> {
             synchronized (lock) {
                 if (out != null && socket != null && !socket.isClosed()) {
-                    String msg = message.replace("\n", "").replace("\r", "");
-                    out.println(msg);
+                    String msg = message.replace("\n", "").replace("\r", ""); // 메시지에서 줄바꿈 제거
+                    out.println(msg); // 메시지 전송
                     Log.d("SocketClient", "Message sent: " + message);
                 } else {
                     Log.e("SocketClient", "Socket is not connected or output stream is null");
@@ -93,13 +96,13 @@ public class SocketClient extends AsyncTask<Void, Void, Void> {
         synchronized (lock) {
             try {
                 if (out != null) {
-                    out.close();
+                    out.close(); // 출력 스트림 닫기
                 }
                 if (in != null) {
-                    in.close();
+                    in.close(); // 입력 스트림 닫기
                 }
                 if (socket != null && !socket.isClosed()) {
-                    socket.close();
+                    socket.close(); // 소켓 닫기
                 }
                 Log.d("SocketClient", "Socket and resources closed");
             } catch (IOException e) {
@@ -110,6 +113,6 @@ public class SocketClient extends AsyncTask<Void, Void, Void> {
 
     // 소켓 연결 상태 확인 메서드
     public boolean isConnected() {
-        return socket != null && !socket.isClosed();
+        return socket != null && !socket.isClosed(); // 소켓이 열려 있는지 여부 반환
     }
 }
