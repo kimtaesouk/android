@@ -34,8 +34,9 @@
             android:name=".Chat.AddChatroom.AddChattingRoomActivity"
             android:exported="false" />
         <activity
-            android:name=".Chat.ChattingOptionActivity"
-            android:theme="@style/DialogTheme">
+            android:name=".Chat.Drawer.ChattingOptionActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Transparent">
         </activity>
         <activity
             android:name=".Chat.ChattingActivity"

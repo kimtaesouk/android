@@ -57,4 +57,6 @@ dependencies {
     implementation 'com.github.bumptech.glide:glide:4.14.2' // Glide 라이브러리 추가
     annotationProcessor 'com.github.bumptech.glide:compiler:4.14.2' // Glide의 Annotation Processor 추가 (optional)
 
+    implementation 'com.google.code.gson:gson:2.11.0'
+
 }

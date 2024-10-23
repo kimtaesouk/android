@@ -39,6 +39,7 @@ import android.widget.Toast;
 
 import com.example.newproject.Chat.ChatListRecy.Chatting;
 import com.example.newproject.Chat.ChatListRecy.ChattingAdapter;
+import com.example.newproject.Chat.Drawer.ChattingOptionActivity;
 import com.example.newproject.Chat.Image.ImageAlbumAdapter;
 import com.example.newproject.Chat.Socket.SocketService;
 import com.example.newproject.Main.Main_Activity;
@@ -101,6 +102,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
     private boolean isLoading = false;  // 데이터 로드 중인지 여부
     private boolean isFirstLoad = true;
     private Bitmap capturedImage = null;  // 카메라로 찍은 이미지를 저장하는 변수
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -195,11 +197,14 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
         ib_room_option.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(getApplicationContext() , ChattingOptionActivity.class);
-                intent.putExtra("roomname" ,  roomname);
-                intent.putExtra("my_pid" ,  my_pid);
-                intent.putExtra("friend_pids" , friend_pids);
-                intent.putExtra("chattingroom_pid" , chattingroom_pid);
+                // 오버레이를 보이게 설정
+                findViewById(R.id.overlay).setVisibility(View.VISIBLE);
+
+                Intent intent = new Intent(getApplicationContext(), ChattingOptionActivity.class);
+                intent.putExtra("roomname", roomname);
+                intent.putExtra("my_pid", my_pid);
+                intent.putExtra("friend_pids", friend_pids);
+                intent.putExtra("chattingroom_pid", chattingroom_pid);
                 startActivity(intent);
                 overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
             }
@@ -240,7 +245,8 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
 
         et_talk.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -253,7 +259,8 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
             }
 
             @Override
-            public void afterTextChanged(Editable s) {}
+            public void afterTextChanged(Editable s) {
+            }
         });
 
         ib_chat_album.setOnClickListener(v -> {
@@ -265,6 +272,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
             }
         });
     }
+
     @Override
     protected void onStart() {
         super.onStart();
@@ -334,6 +342,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
         // RecyclerView에 이미지 URI 리스트 표시
         displayImagesInRecyclerView(imageUris);
     }
+
     // ProgressBar를 보이는 함수
     private void showProgressBar(FrameLayout progressOverlay) {
         progressOverlay.setVisibility(View.VISIBLE); // 오버레이 표시
@@ -390,12 +399,14 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
             });
         }
     }
+
     private void openCamera() {
         Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         if (cameraIntent.resolveActivity(getPackageManager()) != null) {
             startActivityForResult(cameraIntent, CAMERA_INTENT_REQUEST_CODE);
         }
     }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -418,7 +429,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
 
             // 선택한 이미지를 전송
             sendChatMessageWithImages(et_talk.getText().toString(), imageUris);
-        }else if (requestCode == 123) {
+        } else if (requestCode == 123) {
             if (friend_pids.size() == 1 || chattingroom_pid == null) {
                 JSONArray jsonArray = new JSONArray(friend_pids);
                 String friendPidsString = jsonArray.toString();
@@ -513,7 +524,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
     // 리사이클러뷰에 이미지와 함께 데이터를 추가하는 메서드
     private void addImageToRecyclerView(File imageFile, String tempPid) {
         if (imageFile != null) {
-            // 새로운 채팅 메시지 객체를 생성
+            // 새로운 채팅 메시지 객체를 ���성
             Chatting chatMessage = new Chatting(tempPid, chattingroom_pid, my_pid, "name", "사진을 보냈습니다.", reader, getCurrentTime(), 1);
 
             // 이미지 경로를 추가
@@ -541,6 +552,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
         );
         rv_chat_list.setAdapter(chattingAdapter);
     }
+
     // 채팅 삭제 시 처리 로직
     private void onChatDeleted(String chatPid, String option) {
         // chatPid로 해당 메시지의 위치를 찾음
@@ -574,7 +586,6 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
             Log.e("ChattingActivity", "해당 메시지를 찾을 수 없습니다: " + chatPid);
         }
     }
-
 
 
     private void addOtherImageToRecyclerView(File imageFile, String senderid, String sendername) {
@@ -626,7 +637,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                 // 권한이 거부되면 사용자에게 메시지 표시
                 Toast.makeText(this, "카메라 권한이 필요합니다.", Toast.LENGTH_SHORT).show();
             }
-        }else if (requestCode == GALLERY_PERMISSION_REQUEST_CODE) {
+        } else if (requestCode == GALLERY_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 loadGalleryImages();
             } else {
@@ -634,6 +645,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
             }
         }
     }
+
     private void animateLayoutChange() {
         ll_add_file.animate()
                 .translationY(0)  // 위로 올라오는 애니메이션
@@ -650,6 +662,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
             imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
         }
     }
+
     private boolean isMyServiceRunning(Class<?> serviceClass) {
         ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
         if (manager != null) {
@@ -661,6 +674,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
         }
         return false;
     }
+
     private void connectToSocketService() {
         Intent serviceIntent = new Intent(this, SocketService.class);
         serviceIntent.setAction("JOIN_ROOM");
@@ -680,6 +694,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
             Log.d("ChattingActivity", "Service already running, sent JOIN_ROOM broadcast.");
         }
     }
+
     private BroadcastReceiver messageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -715,9 +730,9 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                     clientList = new ArrayList<>(List.of(clients.split(",")));
                     // my_pid와 일치하는 항목을 제외
                     // 클라이언트 수를 기반으로 reader 수 계산
-                    reader =  friend_pids.size() + 1  - clientList.size() ;
-                    System.out.println("addMessageToRecyclerView reader : " + reader );
-                    System.out.println("addMessageToRecyclerView clientList : " + clientList.size() );
+                    reader = friend_pids.size() + 1 - clientList.size();
+                    System.out.println("addMessageToRecyclerView reader : " + reader);
+                    System.out.println("addMessageToRecyclerView clientList : " + clientList.size());
                     String senderName = pidNameMap.getOrDefault(senderId, "Unknown");
                     // 현재 채팅방에 해당하는 메시지인지 확인
                     if (roomId.equals(chattingroom_pid) && !senderId.equals(my_pid)) {
@@ -751,9 +766,9 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                                 hideProgressBar(progressOverlay);
                             });
                         } else if (msg.equals("퇴장")) {
-                            System.out.println("addMessageToRecyclerView clientList 퇴장 : " + clientList.size() );
+                            System.out.println("addMessageToRecyclerView clientList 퇴장 : " + clientList.size());
                             // 일반 메시지 처리
-                        } else if (msg.equals("only") || msg.equals("all") ) {
+                        } else if (msg.equals("only") || msg.equals("all")) {
                             getData2(chattingroom_pid);
                         } else if (msg.startsWith("http://49.247.32.169/NewProject/uploads/")) {
                             System.out.println("msg : " + msg);
@@ -812,6 +827,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
             }
         });
     }
+
     private String getCurrentTime() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             LocalDateTime now = LocalDateTime.now();
@@ -822,6 +838,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
             return sdf.format(new Date());
         }
     }
+
     private void getData(String my_pid, String friend_pid) {
         int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
         if (status == NetworkStatus.TYPE_NOT_CONNECTED) {
@@ -885,9 +902,9 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                                     tv_friend_name.setText(roomname);
                                     setData4(chattingroom_pid, my_pid, () -> getData2(chattingroom_pid));
 
-                                    System.out.println("서버에서 가져온 isBlodk : " + status );
+                                    System.out.println("서버에서 가져온 isBlodk : " + status);
 
-                                    if (status.equals("isBlock")){
+                                    if (status.equals("isBlock")) {
                                         isBlocked = true;  // 차단 상태를 true로 설정
                                         ll_friend_add_or_block.setVisibility(View.VISIBLE);
 
@@ -916,8 +933,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                                                 et_talk.setFocusableInTouchMode(true); // 터치로도 포커스할 수 있게 설정
                                             }
                                         });
-                                    }
-                                    else if (status.equals("false")) {
+                                    } else if (status.equals("false")) {
                                         isBlocked = false;
                                         ll_friend_add_or_block.setVisibility(View.VISIBLE);
 
@@ -948,8 +964,15 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
         });
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // 오버레이를 숨기기
+        findViewById(R.id.overlay).setVisibility(View.GONE);
+    }
+
     private void onAddFriendClick(String f_pid) {
-        // 친구 추가 버튼 클릭 시 실행될 코���
+        // 친구 추가 버튼 클릭 시 실행될 코
         setData(my_pid, friend_pids.get(0));
     }
 
@@ -1011,6 +1034,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
             et_talk.setText(""); // 입력창 초기화
         }
     }
+
     //친구등록이 없다가 처음 친구로 추가 될때
     private void setData(String my_pid, String f_pid) {
         int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
@@ -1044,6 +1068,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                     }
                 });
             }
+
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                 runOnUiThread(new Runnable() {
@@ -1062,9 +1087,9 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                                 try {
                                     JSONObject jsonResponse = new JSONObject(responseData);
                                     boolean success = jsonResponse.getBoolean("success");
-                                    if (success){
+                                    if (success) {
                                         getData(my_pid, friend_pid);
-                                    }else{
+                                    } else {
                                         Log.e("ChattingActivity", "친구추가 실패");
                                     }
                                 } catch (JSONException e) {
@@ -1080,6 +1105,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
             }
         });
     }
+
     // 차단 되있던 친구를 다시 친구목록으로 가져옴
     private void setData2(String f_pid, String my_pid, String state) {
         int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
@@ -1112,6 +1138,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                 e.printStackTrace();
                 runOnUiThread(() -> Log.e("ChattingActivity", "네트워크 요청 실패"));
             }
+
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                 runOnUiThread(() -> {
@@ -1147,6 +1174,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
             }
         });
     }
+
     //ib_send_talk클릭했을때 my_pid, 친구pid , massage
     private void uploadMessageAndImageToServer(String message, File imageFile, String tempPid) {
         System.out.println("isBlocked : " + String.valueOf(isBlocked));
@@ -1217,6 +1245,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
             }
         });
     }
+
     private void getData2(String room_pid) {
         int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
         if (status == NetworkStatus.TYPE_NOT_CONNECTED) {
@@ -1358,6 +1387,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                 e.printStackTrace();
                 runOnUiThread(() -> Log.e("ChattingActivity", "네트워크 요청 실패"));
             }
+
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                 runOnUiThread(() -> {
@@ -1372,7 +1402,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                             try {
                                 JSONObject jsonResponse = new JSONObject(responseData);
                                 boolean success = jsonResponse.getBoolean("success");
-                                if (success){
+                                if (success) {
                                     // setData4가 성공하면 콜백 실행
                                     if (callback != null) {
                                         callback.run();
