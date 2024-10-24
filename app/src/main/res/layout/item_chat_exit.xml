@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:padding="10dp">
+
+    <!-- 이 LinearLayout이 가로 가운데로 오게 설정 -->
+        <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/round_background4"
+        android:gravity="center"
+        android:layout_gravity="center_horizontal"
+        android:padding="1dp">
+
+        <TextView
+        android:id="@+id/tv_chat_exit"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        android:layout_marginLeft="10dp"
+        android:layout_marginRight="10dp"
+        android:gravity="center"/>
+    </LinearLayout>
+
+</LinearLayout>

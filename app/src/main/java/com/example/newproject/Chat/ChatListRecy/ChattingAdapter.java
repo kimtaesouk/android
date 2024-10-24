@@ -53,6 +53,7 @@ public class ChattingAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     private OnChatUpdateListener chatUpdateListener;
 
     // 뷰 타입 정의
+    private static final int VIEW_TYPE_EXIT = -1;
     private static final int VIEW_TYPE_DATE = 0;
     private static final int VIEW_TYPE_SENT = 1;
     private static final int VIEW_TYPE_RECEIVED = 2;
@@ -94,11 +95,14 @@ public class ChattingAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
     @Override
     public int getItemViewType(int position) {
-        // 아이템이 날짜인지 메시지인지에 따라 뷰 타입을 결정
+        // Determine view type based on whether the item is a date or a message
         if (chatListWithDates.get(position) instanceof String) {
             return VIEW_TYPE_DATE;
         } else {
             Chatting chatting = (Chatting) chatListWithDates.get(position);
+            if (chatting.getStatus() == -1) {
+                return VIEW_TYPE_EXIT;
+            }
             return chatting.getSender_pid().equals(pid) ? VIEW_TYPE_SENT : VIEW_TYPE_RECEIVED;
         }
     }
@@ -115,6 +119,9 @@ public class ChattingAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         } else if (viewType == VIEW_TYPE_SENT) {
             view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_chat_mine, parent, false);
             return new SentViewHolder(view);
+        } else if (viewType == VIEW_TYPE_EXIT) {
+            view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_chat_exit, parent, false);
+            return new ExitViewHolder(view);
         } else {
             view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_chat_other, parent, false);
             return new ReceivedViewHolder(view);
@@ -315,6 +322,13 @@ public class ChattingAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                     activity.startActivityForResult(intent, 123);  // startActivityForResult() 호출
                 });
             }
+        } else if (viewType == VIEW_TYPE_EXIT) {
+            ExitViewHolder exitViewHolder = (ExitViewHolder) holder;
+            Chatting chatting = (Chatting) chatListWithDates.get(position);
+
+            ((ExitViewHolder) holder).tv_chat_exit.setText(chatting.msg);
+
+
         }
     }
     private  void popupmeun(int count, String option, Chatting chatting){
@@ -465,6 +479,17 @@ public class ChattingAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             iv_other_image = itemView.findViewById(R.id.iv_other_image);  // 이미지뷰 추가
             ll_other_msg = itemView.findViewById(R.id.ll_other_msg);
             cv_other_image = itemView.findViewById(R.id.cv_other_image);
+        }
+    }
+
+    public static class ExitViewHolder extends RecyclerView.ViewHolder {
+
+        TextView tv_chat_exit;
+
+        public ExitViewHolder(@NonNull View itemView) {
+            super(itemView);
+            tv_chat_exit = itemView.findViewById(R.id.tv_chat_exit);
+
         }
     }
 }

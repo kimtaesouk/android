@@ -7,6 +7,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.Manifest;
+import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.BroadcastReceiver;
 import android.content.ContentUris;
@@ -205,7 +206,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                 intent.putExtra("my_pid", my_pid);
                 intent.putExtra("friend_pids", friend_pids);
                 intent.putExtra("chattingroom_pid", chattingroom_pid);
-                startActivity(intent);
+                startActivityForResult(intent, 4001);
                 overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
             }
         });
@@ -322,7 +323,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                 projection,                  // 반환할 컬럼 (ID와 이미지 이름)
                 null,                        // WHERE 절 (필터링 조건이 없으므로 전체를 조회)
                 null,                        // WHERE 절에서 사용할 파라미터 값
-                MediaStore.Images.Media.DATE_ADDED + "DESC" // 정렬 조건 (가장 최근에 추가된 이미지부터)
+                MediaStore.Images.Media.DATE_ADDED + " DESC" // 정렬 조건 (가장 최근에 추가된 이미지부터)
         );
 
         if (cursor != null) {
@@ -435,6 +436,9 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                 String friendPidsString = jsonArray.toString();
                 getData(my_pid, friendPidsString);
             }
+        }else if (requestCode == 4001 &&  resultCode == Activity.RESULT_OK) {
+            sendMessage(my_pid + "|" + chattingroom_pid + "|" + roomname + "|" + "Exit_Room");
+            finish();
         }
     }
 
@@ -809,6 +813,9 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                                     runOnUiThread(() -> hideProgressBar(findViewById(R.id.progress_overlay)));
                                 }
                             }).start();
+                        }else if (msg.equals("Exit_Room")) {
+                            System.out.println("addMessageToRecyclerView clientList 퇴장 : " + clientList.size());
+                            // 일반 메시지 처리
                         } else {
                             // pidNameMap에서 senderId에 해당하는 이름을 찾음
                             // 새로운 채팅 메시지 생성 및 추가

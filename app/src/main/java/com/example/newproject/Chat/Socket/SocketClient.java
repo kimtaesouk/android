@@ -11,7 +11,7 @@ import java.net.Socket;
 
 // SocketClient 클래스는 비동기적으로 서버와의 소켓 통신을 관리합니다.
 public class SocketClient extends AsyncTask<Void, Void, Void> {
-    private String serverIP = "192.168.0.13"; // 서버 IP 주소
+    private String serverIP = "172.30.1.9"; // 서버 IP 주소
     private int serverPort = 8080; // 서버 포트 번호
     private String roompid; // 방 ID
     private String mypid; // 사용자 ID
