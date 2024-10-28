@@ -66,7 +66,7 @@ public class FriendsAdapter extends RecyclerView.Adapter<FriendsAdapter.FriendVi
         holder.tv_list_fdname.setText(friend.getName());
 
         holder.itemView.setOnClickListener(v -> {
-            System.out.println(friend.getName()  + "/" + friend.getPid());
+
             // 여기서 원하는 동작을 수행할 수 있습니다.
             // 예를 들어, 클릭한 친구의 정보를 포함한 새로운 액티비티를 시작할 수 있습니다.
             Intent intent = new Intent(context, FriendDetailActivity.class);

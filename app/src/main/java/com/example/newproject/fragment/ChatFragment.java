@@ -208,6 +208,7 @@ public class ChatFragment extends Fragment {
                                                 int count = roomObject.getInt("count");
                                                 String last_msg = roomObject.getString("last_msg");
 
+
                                                 chatroomsList.add(new ChattingRoom(roomPid, roomName, participants, createTime, state, last_msg, count));
                                             }
 

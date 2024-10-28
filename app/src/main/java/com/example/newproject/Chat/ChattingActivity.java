@@ -151,6 +151,8 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
         roomname = intent.getStringExtra("roomname");
         friend_pids = intent.getStringArrayListExtra("friend_pid");
 
+        System.out.println(friend_pids);
+
         if (friend_pids.size() == 1 || chattingroom_pid == null) {
             System.out.println("friend_pids.size()가 1 ");
             JSONArray jsonArray = new JSONArray(friend_pids);
@@ -437,6 +439,12 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                 getData(my_pid, friendPidsString);
             }
         }else if (requestCode == 4001 &&  resultCode == Activity.RESULT_OK) {
+//            Intent serviceIntent = new Intent(this, SocketService.class);
+//            serviceIntent.setAction("EXIT_ROOM");
+//            serviceIntent.putExtra("roompid", chattingroom_pid); // 방 ID
+//            serviceIntent.putExtra("roomname", roomname);        // 방 이름
+//            serviceIntent.putExtra("mypid", my_pid);             // 내 ID
+//            serviceIntent.putExtra("message", "Exit_Room");
             sendMessage(my_pid + "|" + chattingroom_pid + "|" + roomname + "|" + "Exit_Room");
             finish();
         }
@@ -815,7 +823,16 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                             }).start();
                         }else if (msg.equals("Exit_Room")) {
                             System.out.println("addMessageToRecyclerView clientList 퇴장 : " + clientList.size());
+                            System.out.println("Exit_Room" + "/" + friend_pids.size());
                             // 일반 메시지 처리
+                            Chatting chatMessage = new Chatting("0", chattingroom_pid, senderId, senderName, senderName + "님이 채팅방을 나갔습니다.", reader, getCurrentTime(), -1);
+                            chatList.add(chatMessage);
+                            // 어댑터 갱신 및 RecyclerView에 메시지 추가
+                            initChattingAdapter();
+                            chattingAdapter.notifyItemInserted(chatList.size() - 1);
+                            // RecyclerView를 최신 메시지 위치로 스크롤
+                            scrollToBottom();
+
                         } else {
                             // pidNameMap에서 senderId에 해당하는 이름을 찾음
                             // 새로운 채팅 메시지 생성 및 추가

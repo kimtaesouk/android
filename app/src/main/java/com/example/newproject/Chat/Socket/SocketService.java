@@ -141,7 +141,7 @@ public class SocketService extends Service {
                 roomNotificationStatus.put(roomId, false);  // 입장 시 알림 비활성화
                 Log.d("SocketService", "User has entered room " + roomId + ", disabling notifications for this room.");
             }
-        } else if (msg.equals("퇴장")) {
+        } else if (msg.equals("Exit_Room") || msg.equals("퇴장")) {
             if (senderId.equals(mypid)) {  // 자신이 퇴장한 경우에만 알림 상태 변경
                 roomNotificationStatus.put(roomId, true);   // 퇴장 시 알림 활성화
                 Log.d("SocketService", "User has exited room " + roomId + ", enabling notifications for this room.");
@@ -155,7 +155,7 @@ public class SocketService extends Service {
 
         // 알림 상태에 따라 알림 표시 여부 결정
         boolean isRoomNotificationEnabled = roomNotificationStatus.get(roomId);
-        if (isRoomNotificationEnabled && !msg.equals("입장") && !msg.equals("퇴장")) {
+        if (isRoomNotificationEnabled && !msg.equals("입장") && !msg.equals("퇴장") && !msg.equals("Exit_Room")) {
             // 알림 설정 (항상 실행)
             mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

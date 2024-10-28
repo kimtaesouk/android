@@ -11,6 +11,8 @@ import android.widget.TextView;
 import com.example.newproject.Chat.ChattingActivity;
 import com.example.newproject.R;
 
+import java.util.ArrayList;
+
 public class FriendDetailActivity extends AppCompatActivity {
 
     TextView tv_friend_name;
@@ -45,8 +47,10 @@ public class FriendDetailActivity extends AppCompatActivity {
         ib_enter_chat.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                ArrayList<String> friendPids = new ArrayList<>();
+                friendPids.add(friend_pid);
                 Intent intent = new Intent(getApplicationContext(), ChattingActivity.class);
-                intent.putExtra("friend_pid", friend_pid);
+                intent.putExtra("friend_pid", friendPids);
                 intent.putExtra("my_pid" , my_pid);
                 startActivity(intent);
                 finish();

@@ -133,6 +133,8 @@ public class ChattingOptionActivity extends AppCompatActivity {
                             try {
                                 JSONObject jsonResponse = new JSONObject(responseData);
 
+                                System.out.println(jsonResponse);
+
                                 Intent returnIntent = new Intent();
                                 setResult(Activity.RESULT_OK, returnIntent);
                                 finish();
@@ -171,6 +173,7 @@ public class ChattingOptionActivity extends AppCompatActivity {
         RequestBody formBody = new FormBody.Builder()
                 .add("pid", my_pid)
                 .add("friend_pids", friendPidsJson) // Corrected key to match PHP code
+                .add("chattingroom_pid", chattingroom_pid) // Corrected key to match PHP code
                 .build();
 
         // 요청 만들기
@@ -206,21 +209,26 @@ public class ChattingOptionActivity extends AppCompatActivity {
                                 if (success) {
                                     JSONObject data = jsonResponse.getJSONObject("data");
                                     JSONObject user = data.getJSONObject("user");
-                                    JSONArray friends = data.getJSONArray("friends");
 
                                     // 사용자 정보 처리
                                     String userName = user.getString("name");
                                     String userPid = user.getString("pid");
                                     ParticipantsList.add(new Participants(userName, userPid));
 
-                                    // 친구 목록 처리
-                                    for (int i = 0; i < friends.length(); i++) {
-                                        JSONObject friend = friends.getJSONObject(i);
-                                        String friendName = friend.getString("name");
-                                        String friendPid = friend.getString("pid");
-                                        // 친구 정보 사용
-                                        System.out.println(userPid + userName + "/" + friendPid + friendName);
-                                        ParticipantsList.add(new Participants(friendName, friendPid));
+                                    if (data.has("friends")) {
+                                        JSONArray friends = data.getJSONArray("friends");
+
+                                        // 친구 목록 처리
+                                        for (int i = 0; i < friends.length(); i++) {
+                                            JSONObject friend = friends.getJSONObject(i);
+                                            String friendName = friend.getString("name");
+                                            String friendPid = friend.getString("pid");
+                                            // 친구 정보 사용
+                                            System.out.println(userPid + userName + "/" + friendPid + friendName);
+                                            ParticipantsList.add(new Participants(friendName, friendPid));
+                                        }
+                                    } else {
+                                        Log.w("ChattingActivity", "친구 목록이 없습니다.");
                                     }
                                     participantsAdapter = new ParticipantsAdapter(ParticipantsList);
                                     rv_chat_user_list.setAdapter(participantsAdapter);
