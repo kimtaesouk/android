@@ -7,6 +7,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -42,8 +43,9 @@ public class AddChattingRoomActivity extends AppCompatActivity {
     AddChatroomFriendsAdapter2 addChatroomFriendsAdapter2;
     ArrayList<Friends> friendsList = new ArrayList<>();
     RecyclerView rv_friend_list, rv_add_friend_list;
-    String my_pid;
+    String my_pid, chattingroom_pid = null;
     ArrayList<Friends> checkfriendsList = new ArrayList<>();
+    ArrayList<String> friend_pids = new ArrayList<>();
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -56,9 +58,18 @@ public class AddChattingRoomActivity extends AppCompatActivity {
 
         Intent intent = getIntent();
         my_pid = intent.getStringExtra("my_pid");
+        if(intent.hasExtra("chattingroom_pid") && intent.hasExtra("friend_pids")){
+            chattingroom_pid = intent.getStringExtra("chattingroom_pid");
+            friend_pids = intent.getStringArrayListExtra("friend_pids");
+
+            System.out.println("AddChattingRoomActivity" + "/" + chattingroom_pid);
+            System.out.println("AddChattingRoomActivity" + "/" + friend_pids);
+        }
         getData(my_pid);
 
-        addChatroomFriendsAdapter = new AddChatroomFriendsAdapter(friendsList, my_pid, getApplicationContext(), new AddChatroomFriendsAdapter.FriendsDataListener() {
+
+
+        addChatroomFriendsAdapter = new AddChatroomFriendsAdapter(friendsList, my_pid,friend_pids,chattingroom_pid, getApplicationContext(), new AddChatroomFriendsAdapter.FriendsDataListener() {
             @Override
             public void onDataChanged(ArrayList<Friends> checkList, int adapterPosition) {
                 // Update friend count TextView
@@ -91,20 +102,129 @@ public class AddChattingRoomActivity extends AppCompatActivity {
         btn_complet.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                ArrayList<String> friendPids = new ArrayList<>();
+                if(!intent.hasExtra("chattingroom_pid") && !intent.hasExtra("friend_pids")){
+                    btn_complet_chatfrag();
+                }else if(intent.hasExtra("chattingroom_pid") && intent.hasExtra("friend_pids")){
+                    ArrayList<String> friendPids = new ArrayList<>();
 
-                // checkfriendsList에서 각 친구의 pid를 추출하여 friendPids 리스트에 추가
-                for (Friends friend : checkfriendsList) {
-                    friendPids.add(friend.getPid());
+                    // checkfriendsList에서 각 친구의 pid를 추출하여 friendPids 리스트에 추가
+                    for (Friends friend : checkfriendsList) {
+                        friendPids.add(friend.getPid());
+                    }
+                    setparticepants(chattingroom_pid, friendPids);
                 }
+            }
+        });
+    }
 
-                System.out.println(friendPids);
-                // Intent에 pid 리스트 추가
-                Intent intent1 = new Intent(getApplicationContext(), ChattingActivity.class);
-                intent1.putStringArrayListExtra("friend_pid", friendPids);
-                intent1.putExtra("my_pid", my_pid);
-                startActivity(intent1);
-                finish();
+    private void btn_complet_chatfrag(){
+        ArrayList<String> friendPids = new ArrayList<>();
+
+        // checkfriendsList에서 각 친구의 pid를 추출하여 friendPids 리스트에 추가
+        for (Friends friend : checkfriendsList) {
+            friendPids.add(friend.getPid());
+        }
+
+        System.out.println(friendPids);
+        // Intent에 pid 리스트 추가
+        Intent intent1 = new Intent(getApplicationContext(), ChattingActivity.class);
+        intent1.putStringArrayListExtra("friend_pid", friendPids);
+        intent1.putExtra("my_pid", my_pid);
+        startActivity(intent1);
+        finish();
+
+    }
+    private void btn_complet_chatroom(){
+        ArrayList<String> friendPids = new ArrayList<>();
+
+        // checkfriendsList에서 각 친구의 pid를 추출하여 friendPids 리스트에 추가
+        for (Friends friend : checkfriendsList) {
+            friendPids.add(friend.getPid());
+        }
+
+        System.out.println(friendPids);
+        // Intent에 pid 리스트 추가
+        Intent intent1 = new Intent(getApplicationContext(), ChattingActivity.class);
+        intent1.putStringArrayListExtra("friend_pid", friendPids);
+        intent1.putExtra("my_pid", my_pid);
+        startActivity(intent1);
+        finish();
+
+    }
+    private void setparticepants(String chattingroom_pid,ArrayList<String> friend_pids ) {
+        int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
+        String friendPidsString = TextUtils.join(",", friend_pids);
+        if (status == NetworkStatus.TYPE_NOT_CONNECTED) {
+            Toast.makeText(getApplicationContext(), "네트워크 연결을 확인하세요.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // get방식 파라미터 추가
+        HttpUrl.Builder urlBuilder = HttpUrl.parse("http://49.247.32.169/NewProject/Get_addcharroom_frdlist.php").newBuilder();
+        urlBuilder.addQueryParameter("v", "1.0"); // 예시
+        String url = urlBuilder.build().toString();
+
+        // POST 파라미터 추가
+        RequestBody formBody = new FormBody.Builder()
+                .add("chattingroom_pid", chattingroom_pid)
+                .add("friend_pids", friendPidsString)
+                .build();
+
+        // 요청 만들기
+        OkHttpClient client = new OkHttpClient();
+        Request request = new Request.Builder()
+                .url(url)
+                .post(formBody)
+                .build();
+
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                e.printStackTrace();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(getApplicationContext(), "네트워크 요청 실패", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            if (!response.isSuccessful()) {
+                                // 응답 실패
+                                Log.i("tag", "응답 실패");
+                                Toast.makeText(getApplicationContext(), "네트워크 문제 발생", Toast.LENGTH_SHORT).show();
+                            } else {
+                                // 응답 성공
+                                Log.i("tag", "응답 성공");
+                                final String responseData = response.body().string();
+                                Log.i("tag", "서버 응답: " + responseData); // 응답 데이터 로그 기록
+
+                                try {
+                                    JSONObject jsonResponse = new JSONObject(responseData);
+                                    boolean success = jsonResponse.getBoolean("success");
+
+                                    if (success) {
+
+
+                                    } else {
+                                        Toast.makeText(getApplicationContext(), "데이터 로드 실패 했습니다.", Toast.LENGTH_SHORT).show();
+                                    }
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                    Toast.makeText(getApplicationContext(), "응답 처리 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show();
+                                }
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
             }
         });
     }

@@ -23,18 +23,21 @@ public class AddChatroomFriendsAdapter extends RecyclerView.Adapter<AddChatroomF
     private ArrayList<Friends> checkfriendsList; // 체크된 친구 리스트
     private Context context;
     private AddChatroomFriendsAdapter.FriendsDataListener dataListener;
-    private String pid;
+    private String pid,chattingroom_pid;
+    private ArrayList<String> friend_pids = new ArrayList<>();
 
     public interface FriendsDataListener {
         void onDataChanged(ArrayList<Friends> size, int adapterPosition);
     }
 
-    public AddChatroomFriendsAdapter(ArrayList<Friends> friendsList, String pid, Context context, AddChatroomFriendsAdapter.FriendsDataListener dataListener) {
+    public AddChatroomFriendsAdapter(ArrayList<Friends> friendsList, String pid, ArrayList<String> friend_pids, String chattingroom_pid, Context context, FriendsDataListener dataListener) {
         this.friendsList = friendsList;
         this.context = context;
         this.pid = pid;
         this.dataListener = dataListener;
         this.checkfriendsList = new ArrayList<>(); // checkfriendsList 초기화
+        this.chattingroom_pid = chattingroom_pid;
+        this.friend_pids = friend_pids;
     }
 
     @NonNull
@@ -54,6 +57,10 @@ public class AddChatroomFriendsAdapter extends RecyclerView.Adapter<AddChatroomF
         holder.cb_add_chattingroom.setOnCheckedChangeListener(null); // 기존 리스너 제거
         holder.cb_add_chattingroom.setChecked(isChecked); // 체크박스 상태 설정
 
+        // friend_pids에 현재 친구의 pid가 있는지 확인
+        boolean isNonClickable = friend_pids.contains(friend.getPid());
+        holder.cb_add_chattingroom.setEnabled(!isNonClickable); // 터치 불가 설정
+
         holder.cb_add_chattingroom.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -70,9 +77,6 @@ public class AddChatroomFriendsAdapter extends RecyclerView.Adapter<AddChatroomF
                         checkfriendsList.remove(currentFriend);
                         notifyDataChanged(adapterPosition);
                     }
-
-                    // 여기서는 notifyItemChanged(adapterPosition);을 사용할 필요는 없음
-                    // 모든 상태 변경은 이미 리스너 안에서 수행됨
                 }
             }
         });

@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.graphics.Rect;
 import android.os.Bundle;
 
+import com.example.newproject.Chat.AddChatroom.AddChattingRoomActivity;
 import com.example.newproject.Chat.ChatListRecy.Chatting;
 import com.example.newproject.Chat.ChattingActivity;
 import com.example.newproject.R;
@@ -49,7 +50,7 @@ public class ChattingOptionActivity extends AppCompatActivity {
 
     DrawerImagesAdapter drawerImagesAdapter;
 
-    ImageButton ib_exit;
+    ImageButton ib_exit, ib_drawer_add_frd;
 
     String roomname, my_pid, chattingroom_pid;
 
@@ -63,6 +64,7 @@ public class ChattingOptionActivity extends AppCompatActivity {
         rv_drawer_image = findViewById(R.id.rv_drawer_image);
         rv_chat_user_list = findViewById(R.id.rv_chat_user_list);
         ib_exit = findViewById(R.id.ib_exit);
+        ib_drawer_add_frd = findViewById(R.id.ib_drawer_add_frd);
 
 
         rv_chat_user_list.setLayoutManager(new LinearLayoutManager(this));
@@ -75,6 +77,7 @@ public class ChattingOptionActivity extends AppCompatActivity {
         chattingroom_pid = intent.getStringExtra("chattingroom_pid");
 
         ib_exit.setOnClickListener( v -> ib_exitclick(my_pid , chattingroom_pid));
+        ib_drawer_add_frd.setOnClickListener( v -> ib_add_frd(my_pid, chattingroom_pid));
         getparticipantsData(my_pid , friend_pids);
         getImageData(chattingroom_pid);
     }
@@ -82,6 +85,16 @@ public class ChattingOptionActivity extends AppCompatActivity {
     private void ib_exitclick(String my_pid, String chattingroom_pid){
         updateRoomExit(my_pid, chattingroom_pid);
 
+    }
+
+    private void ib_add_frd(String my_pid, String chattingroom_pid){
+
+        Intent intent = new Intent(getApplicationContext() , AddChattingRoomActivity.class);
+        intent.putExtra("my_pid", my_pid);
+        intent.putExtra("chattingroom_pid", chattingroom_pid);
+        intent.putExtra("friend_pids", friend_pids);
+
+        startActivity(intent);
     }
     private void updateRoomExit(String my_pid, String chattingroom_pid) {
         int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
