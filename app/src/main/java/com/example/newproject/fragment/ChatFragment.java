@@ -74,10 +74,6 @@ public class ChatFragment extends Fragment {
         return view;
     }
 
-    @Override
-    public void onStart() {
-        super.onStart();
-    }
 
     private BroadcastReceiver messageReceiver = new BroadcastReceiver() {
         @Override
@@ -108,7 +104,7 @@ public class ChatFragment extends Fragment {
                         String msg = parts.length > 3 ? parts[3].trim() : "";
 
                         // 클라이언트 리스트 (콤마로 구분된 문자열)
-                        if (!msg.equals("퇴장") && !msg.equals("입장")){
+                        if (!msg.equals("퇴장") && !msg.equals("입장") && !msg.equals("JoIn_Room")){
                             getData(pid);
                         }
                     } catch (NumberFormatException e) {
@@ -200,13 +196,13 @@ public class ChatFragment extends Fragment {
                                             for (int i = 0; i < roomsArray.length(); i++) {
                                                 JSONObject roomObject = roomsArray.getJSONObject(i);
 
-                                                String roomPid = roomObject.getString("pid");
-                                                String roomName = roomObject.getString("roomname");
-                                                String participants = roomObject.getString("Participants");
-                                                String createTime = roomObject.getString("create");
-                                                int state = roomObject.getInt("state");
-                                                int count = roomObject.getInt("count");
-                                                String last_msg = roomObject.getString("last_msg");
+                                                String roomPid = roomObject.optString("pid", " ");
+                                                String roomName = roomObject.optString("roomname", " ");
+                                                String participants = roomObject.optString("Participants", " ");
+                                                String createTime = roomObject.optString("create", " ");
+                                                int state = roomObject.optInt("state", 1);
+                                                int count = roomObject.optInt("count", 0);
+                                                String last_msg = roomObject.optString("last_msg", " ");
 
 
                                                 chatroomsList.add(new ChattingRoom(roomPid, roomName, participants, createTime, state, last_msg, count));

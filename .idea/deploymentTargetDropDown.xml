@@ -7,12 +7,12 @@
         <deviceKey>
           <Key>
             <type value="VIRTUAL_DEVICE_PATH" />
-            <value value="C:\Users\kimts\.android\avd\Pixel_4_API_24.avd" />
+            <value value="C:\Users\kimts\.android\avd\Pixel_4_API_24_2.avd" />
           </Key>
         </deviceKey>
       </Target>
     </targetSelectedWithDropDown>
-    <timeTargetWasSelectedWithDropDown value="2024-10-28T04:40:38.526854700Z" />
+    <timeTargetWasSelectedWithDropDown value="2024-11-07T07:50:01.652536200Z" />
     <multipleDevicesSelectedInDropDown value="true" />
     <targetsSelectedWithDialog>
       <Target>
@@ -20,7 +20,7 @@
         <deviceKey>
           <Key>
             <type value="VIRTUAL_DEVICE_PATH" />
-            <value value="C:\Users\kimts\.android\avd\Pixel_4_API_24.avd" />
+            <value value="C:\Users\kimts\.android\avd\Pixel_4_API_24_2.avd" />
           </Key>
         </deviceKey>
       </Target>
@@ -29,7 +29,7 @@
         <deviceKey>
           <Key>
             <type value="VIRTUAL_DEVICE_PATH" />
-            <value value="C:\Users\kimts\.android\avd\Pixel_4_API_24_2.avd" />
+            <value value="C:\Users\kimts\.android\avd\Pixel_4_API_24_4.avd" />
           </Key>
         </deviceKey>
       </Target>

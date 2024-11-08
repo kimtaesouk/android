@@ -11,8 +11,6 @@ import android.graphics.Rect;
 import android.os.Bundle;
 
 import com.example.newproject.Chat.AddChatroom.AddChattingRoomActivity;
-import com.example.newproject.Chat.ChatListRecy.Chatting;
-import com.example.newproject.Chat.ChattingActivity;
 import com.example.newproject.R;
 import com.example.newproject.singup.NetworkStatus;
 import com.google.gson.Gson;
@@ -28,7 +26,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,7 +34,6 @@ import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.FormBody;
 import okhttp3.HttpUrl;
-import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -55,6 +51,8 @@ public class ChattingOptionActivity extends AppCompatActivity {
     String roomname, my_pid, chattingroom_pid;
 
     ArrayList<String> friend_pids = new ArrayList<>();
+
+    ArrayList<String> list = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,8 +91,26 @@ public class ChattingOptionActivity extends AppCompatActivity {
         intent.putExtra("my_pid", my_pid);
         intent.putExtra("chattingroom_pid", chattingroom_pid);
         intent.putExtra("friend_pids", friend_pids);
+        intent.putExtra("roomname", roomname);
 
-        startActivity(intent);
+        startActivityForResult(intent, 202);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == 202) {
+            if (resultCode == RESULT_OK) {
+                String friendPidsString = data.getStringExtra("friendPidsString");
+                Intent returnIntent = new Intent();
+                returnIntent.putExtra("friendPidsString", friendPidsString);
+                setResult(202, returnIntent);
+                finish(); // 액티비티 종료
+            } else if (resultCode == RESULT_CANCELED) {
+                Toast.makeText(this, "Operation canceled", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
     private void updateRoomExit(String my_pid, String chattingroom_pid) {
         int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
@@ -226,7 +242,17 @@ public class ChattingOptionActivity extends AppCompatActivity {
                                     // 사용자 정보 처리
                                     String userName = user.getString("name");
                                     String userPid = user.getString("pid");
+                                    String friendsPidString = user.getString("friends_pid");
+                                    System.out.println(friendsPidString);
                                     ParticipantsList.add(new Participants(userName, userPid));
+
+                                    JSONArray userFriends = new JSONArray(friendsPidString);
+
+                                    // JSONArray를 List로 변환
+
+                                    for (int i = 0; i < userFriends.length(); i++) {
+                                        list.add(userFriends.getString(i));
+                                    }
 
                                     if (data.has("friends")) {
                                         JSONArray friends = data.getJSONArray("friends");
@@ -243,7 +269,7 @@ public class ChattingOptionActivity extends AppCompatActivity {
                                     } else {
                                         Log.w("ChattingActivity", "친구 목록이 없습니다.");
                                     }
-                                    participantsAdapter = new ParticipantsAdapter(ParticipantsList);
+                                    participantsAdapter = new ParticipantsAdapter(ParticipantsList, list, my_pid, ChattingOptionActivity.this);
                                     rv_chat_user_list.setAdapter(participantsAdapter);
                                 } else {
                                     String message = jsonResponse.getString("message");

@@ -32,13 +32,15 @@ public class SocketService extends Service {
             String roompid = intent.getStringExtra("roompid");
             String roomname = intent.getStringExtra("roomname");
             String mypid = intent.getStringExtra("mypid");
+            String friendNamesString = intent.getStringExtra("friendNamesString");
+            String friendPidsString = intent.getStringExtra("friendPidsString");
 
             switch (action) {
                 case "SOCKET_OPEN":
                     initializeSocketClient(mypid);
                     break;
 
-                case "JOIN_ROOM":
+                case "VISIT_ROOM":
                     if (roompid != null && !roompid.equals(currentRoomId)) {
                         joinRoom(roompid, roomname, mypid);
                     }
@@ -65,6 +67,10 @@ public class SocketService extends Service {
                     sendMessage(mypid + "|" + roompid + "|" + roomname + "|" + "차단해제");
                     break;  // 차단 해제 처리 후 break 추가
 
+                case "JOIN_ROOM":
+                    Log.d("SocketService", "User is joined in room: " + friendPidsString + friendNamesString);
+                    sendMessage(friendPidsString + "|" + roompid + "|" + friendNamesString + "|" + "JOIN_ROOM");
+                    break;  // 차단 해제 처리 후 break 추가
                 default:
                     Log.d("SocketService", "Unknown action: " + action);
                     break;
@@ -146,12 +152,16 @@ public class SocketService extends Service {
                 roomNotificationStatus.put(roomId, true);   // 퇴장 시 알림 활성화
                 Log.d("SocketService", "User has exited room " + roomId + ", enabling notifications for this room.");
             }
+        } else if (msg.equals("JoIn_Room")) {
+            return; // 알림을 보내지 않고 반환
         } else if (msg.equals("only") || msg.equals("all")) {
             Log.d("SocketService", "No notification for message: " + msg);
             return; // 알림을 보내지 않고 반환
         } else if (msg.startsWith("http://")) {
             msg = "사진을 전송했습니다.";
         }
+
+
 
         // 알림 상태에 따라 알림 표시 여부 결정
         boolean isRoomNotificationEnabled = roomNotificationStatus.get(roomId);

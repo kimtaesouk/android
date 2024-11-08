@@ -5,23 +5,46 @@
     android:orientation="horizontal">
 
 
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+                <ImageView
+                    android:id="@+id/iv_profile_im"
+                    android:layout_width="50dp"
+                    android:layout_height="50dp"
+                    android:background="@drawable/rounded_rectangle3"
+                    android:src="@drawable/user"
+                    android:gravity="center"
+                    android:layout_margin="15dp"/>
+                <ImageView
+                    android:id="@+id/iv_question_im"
+                    android:layout_width="50dp"
+                    android:layout_height="50dp"
+                    android:background="@drawable/rounded_rectangle5"
+                    android:src="@drawable/baseline_question_mark_24"
+                    android:gravity="center"
+                    android:layout_margin="15dp"
+                    android:visibility="gone"/>
+        </FrameLayout>
 
-        <ImageView
-            android:id="@+id/iv_profile_im"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:background="@drawable/rounded_rectangle3"
-            android:src="@drawable/user"
-            android:gravity="center"
-            android:layout_margin="15dp"/>
+
 
         <TextView
             android:id="@+id/tv_list_fdname"
-            android:layout_width="match_parent"
+            android:layout_width="140dp"
             android:layout_height="wrap_content"
             android:textSize="25sp"
             android:textStyle="bold"
             android:layout_gravity="center"
             android:layout_marginLeft="20dp"/>
+
+        <ImageButton
+            android:id="@+id/ib_add_friend"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:src="@drawable/baseline_add_24"
+            android:layout_gravity="center"
+            android:visibility="gone"
+            android:background="@null"/>
 
 </LinearLayout>

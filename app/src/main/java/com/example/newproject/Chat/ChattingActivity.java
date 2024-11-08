@@ -151,7 +151,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
         roomname = intent.getStringExtra("roomname");
         friend_pids = intent.getStringArrayListExtra("friend_pid");
 
-        System.out.println(friend_pids);
+        System.out.println("123456789"  + chattingroom_pid);
 
         if (friend_pids.size() == 1 || chattingroom_pid == null) {
             System.out.println("friend_pids.size()가 1 ");
@@ -439,14 +439,21 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                 getData(my_pid, friendPidsString);
             }
         }else if (requestCode == 4001 &&  resultCode == Activity.RESULT_OK) {
-//            Intent serviceIntent = new Intent(this, SocketService.class);
-//            serviceIntent.setAction("EXIT_ROOM");
-//            serviceIntent.putExtra("roompid", chattingroom_pid); // 방 ID
-//            serviceIntent.putExtra("roomname", roomname);        // 방 이름
-//            serviceIntent.putExtra("mypid", my_pid);             // 내 ID
-//            serviceIntent.putExtra("message", "Exit_Room");
             sendMessage(my_pid + "|" + chattingroom_pid + "|" + roomname + "|" + "Exit_Room");
             finish();
+        }else if (requestCode == 4001 &&  resultCode == 202) {
+            String friendPidsString = data.getStringExtra("friendPidsString");
+            System.out.println(friendPidsString);
+
+// friendPidsString을 쉼표(,)로 분리하여 배열로 변환
+            String[] friendPidsArray = friendPidsString.split(",");
+
+// 배열의 각 요소를 friend_pids 리스트에 추가
+            for (String pid : friendPidsArray) {
+                friend_pids.add(pid.trim()); // trim()을 사용하여 공백 제거
+            }
+
+            getData2(chattingroom_pid);
         }
     }
 
@@ -689,7 +696,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
 
     private void connectToSocketService() {
         Intent serviceIntent = new Intent(this, SocketService.class);
-        serviceIntent.setAction("JOIN_ROOM");
+        serviceIntent.setAction("VISIT_ROOM");
         serviceIntent.putExtra("roompid", chattingroom_pid); // 방 ID
         serviceIntent.putExtra("roomname", roomname);        // 방 이름
         serviceIntent.putExtra("mypid", my_pid);             // 내 ID
@@ -735,6 +742,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                     parts = message.split("\\|");
                     String senderId = parts[0].trim();
                     String roomId = parts[1].trim();
+                    String roomName = parts[2].trim();
                     String msg = parts.length > 3 ? parts[3].trim() : "";
                     System.out.println("addMessageToRecyclerView msg : " + msg);
                     // 클라이언트 리스트 (콤마로 구분된 문자열)
@@ -746,6 +754,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                     System.out.println("addMessageToRecyclerView reader : " + reader);
                     System.out.println("addMessageToRecyclerView clientList : " + clientList.size());
                     String senderName = pidNameMap.getOrDefault(senderId, "Unknown");
+                    String friendsName = pidNameMap.getOrDefault(senderId, "Unknown");
                     // 현재 채팅방에 해당하는 메시지인지 확인
                     if (roomId.equals(chattingroom_pid) && !senderId.equals(my_pid)) {
                         // 입장 메시지 처리
@@ -755,7 +764,11 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                             // 모든 메시지의 reader_count 업데이트
                             for (Chatting chat : chatList) {
                                 if (chat.getCount() != 0) {
-                                    chat.setCount(reader);
+                                    System.out.println("chat.getCount : " + chat.getCount());
+                                    if(chat.getCount() == friend_pids.size()){
+                                        chat.setCount(chat.getCount() - 1);
+                                    }
+                                    chat.setCount(chat.getCount());
                                 }
                             }
                             // ProgressBar 표시
@@ -832,8 +845,22 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                             chattingAdapter.notifyItemInserted(chatList.size() - 1);
                             // RecyclerView를 최신 메시지 위치로 스크롤
                             scrollToBottom();
-
+                        }else if (msg.equals("JoIn_Room")) {
+                            System.out.println("addMessageToRecyclerView 참여 : " + clientList.size());
+                            System.out.println("JoIn_Room" + "/" + friend_pids.size());
+                            // 일반 메시지 처리
+                            roomname = roomname + "," + roomName;
+                            tv_friend_name.setText(roomname);
+                            Chatting chatMessage = new Chatting("0", chattingroom_pid, senderId, senderName, roomName + "님이 채팅방에 참여하였습니다.", reader, getCurrentTime(), -1);
+                            chatList.add(chatMessage);
+                            // 어댑터 갱신 및 RecyclerView에 메시지 추가
+                            initChattingAdapter();
+                            chattingAdapter.notifyItemInserted(chatList.size() - 1);
+                            // RecyclerView를 최신 메시지 위치로 스크롤
+                            getData2(roomId);
+                            scrollToBottom();
                         } else {
+                            reader = friend_pids.size() + 1 - clientList.size();
                             // pidNameMap에서 senderId에 해당하는 이름을 찾음
                             // 새로운 채팅 메시지 생성 및 추가
                             Chatting chatMessage = new Chatting("0", chattingroom_pid, senderId, senderName, msg, reader, getCurrentTime(), 1);
@@ -1038,8 +1065,9 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
         // 임시 PID를 생성 (리스트에 메시지를 추가할 때 사용할 임시 PID)
         String tempPid = "temp_" + System.currentTimeMillis(); // 임시로 고유한 PID 생성
 
+        reader = friend_pids.size() + 1 - clientList.size();
         // 새로운 채팅 메시지 생성 (임시 PID 사용)
-        Chatting chatMessage = new Chatting(tempPid, chattingroom_pid, my_pid, "name", msg, reader, getCurrentTime(), 1);
+        Chatting chatMessage = new Chatting(tempPid, chattingroom_pid, my_pid, "name", msg, reader, getCurrentTime(), 3);
 
         // UI 스레드에서 데이터를 추가하고 RecyclerView 갱신
         runOnUiThread(() -> {
@@ -1202,14 +1230,20 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
     //ib_send_talk클릭했을때 my_pid, 친구pid , massage
     private void uploadMessageAndImageToServer(String message, File imageFile, String tempPid) {
         System.out.println("isBlocked : " + String.valueOf(isBlocked));
+
         String friendPidsString = TextUtils.join(",", friend_pids);
+        String clientListString = TextUtils.join(",", clientList);
         OkHttpClient client = new OkHttpClient();
+
+        System.out.println(message+ my_pid+ friendPidsString+ chattingroom_pid);
+
 
         MultipartBody.Builder builder = new MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
                 .addFormDataPart("message", message)
                 .addFormDataPart("my_pid", my_pid)
                 .addFormDataPart("friend_pids", friendPidsString)
+                .addFormDataPart("clientList", clientListString)
                 .addFormDataPart("isBlocked", String.valueOf(isBlocked))
                 .addFormDataPart("chattingroom_pid", chattingroom_pid);
 
@@ -1239,6 +1273,8 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                         try {
                             JSONObject jsonResponse = new JSONObject(responseData);
                             boolean success = jsonResponse.getBoolean("success");
+                            System.out.println("Set_talk 에서 보냄 : " + responseData);
+
                             if (success) {
                                 String chatting_pid = jsonResponse.getString("chatting_pid");
 
@@ -1286,6 +1322,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
         HttpUrl.Builder urlBuilder = HttpUrl.parse("http://49.247.32.169/NewProject/Get_chatlist.php").newBuilder();
         urlBuilder.addQueryParameter("v", "1.0");
         String url = urlBuilder.build().toString();
+        System.out.println(my_pid + "/" + room_pid + "/" + currentPage + "/" + PAGE_SIZE);
 
         RequestBody formBody = new FormBody.Builder()
                 .add("my_pid", my_pid)
@@ -1318,6 +1355,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
                         } else {
                             JSONObject jsonResponse = new JSONObject(responseData);
                             boolean success = jsonResponse.getBoolean("success");
+                            System.out.println(jsonResponse);
 
                             if (success) {
                                 JSONArray roomsArray = jsonResponse.getJSONArray("rooms");
@@ -1393,6 +1431,7 @@ public class ChattingActivity extends AppCompatActivity implements ImageAlbumAda
             Log.e("ChattingActivity", "네트워크 연결을 확인하세요.");
             return;
         }
+        System.out.println("setData4 reader_pid :" + reader_pid);
         HttpUrl.Builder urlBuilder = HttpUrl.parse("http://49.247.32.169/NewProject/Update_Chatting_Reader.php").newBuilder();
         urlBuilder.addQueryParameter("v", "1.0");
         String url = urlBuilder.build().toString();

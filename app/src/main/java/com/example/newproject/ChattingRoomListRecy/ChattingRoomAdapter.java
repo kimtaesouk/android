@@ -44,37 +44,36 @@ public class ChattingRoomAdapter extends RecyclerView.Adapter<ChattingRoomAdapte
 
     @Override
     public void onBindViewHolder(@NonNull ChattingRoomAdapter.ChattingRoomViewHolder holder, int position) {
-
         try {
             holder.tv_list_frdname.setText(ChattingRoomList.get(position).roomname);
             holder.tv_list_chat.setText(ChattingRoomList.get(position).last_msg);
-            String dateTimeString = ChattingRoomList.get(position).create;
-            SimpleDateFormat originalFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.KOREA);
-            SimpleDateFormat targetFormat = new SimpleDateFormat("a hh:mm", Locale.KOREA);
 
-            Date date = originalFormat.parse(dateTimeString);
-            String formattedTime = targetFormat.format(date);
-            holder.tv_list_time.setText(formattedTime);
+            String dateTimeString = ChattingRoomList.get(position).create;
+            if (dateTimeString != null && !dateTimeString.isEmpty()) {
+                SimpleDateFormat originalFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.KOREA);
+                SimpleDateFormat targetFormat = new SimpleDateFormat("a hh:mm", Locale.KOREA);
+
+                Date date = originalFormat.parse(dateTimeString);
+                String formattedTime = targetFormat.format(date);
+                holder.tv_list_time.setText(formattedTime);
+            } else {
+                holder.tv_list_time.setText(""); // 기본값 설정
+            }
 
             int count = ChattingRoomList.get(position).count;
             if (count != 0) {
                 holder.tv_list_count.setText(String.valueOf(count));
-            } else if (count == 0) {
+            } else {
                 holder.tv_list_count.setVisibility(View.GONE);
             }
-
-            System.out.println(dateTimeString);
 
             holder.itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    int currentPosition = holder.getAdapterPosition(); // Get the current position
-                    if (currentPosition != RecyclerView.NO_POSITION) { // Ensure the position is valid
+                    int currentPosition = holder.getAdapterPosition();
+                    if (currentPosition != RecyclerView.NO_POSITION) {
                         try {
-                            // Participants 문자열을 JSONArray로 파싱
                             JSONArray participantsArray = new JSONArray(ChattingRoomList.get(currentPosition).Participants);
-
-                            // 참가자 목록에서 pid와 일치하지 않는 항목만 새로운 JSONArray에 추가
                             ArrayList<String> friend_pid = new ArrayList<>();
                             for (int i = 0; i < participantsArray.length(); i++) {
                                 String participant = participantsArray.getString(i);
@@ -82,16 +81,13 @@ public class ChattingRoomAdapter extends RecyclerView.Adapter<ChattingRoomAdapte
                                     friend_pid.add(participant);
                                 }
                             }
-                            System.out.println(friend_pid);
 
-                            // friend_pid should now contain the desired participant's pid as a plain string
                             Intent intent = new Intent(context, ChattingActivity.class);
                             intent.putExtra("friend_pid", friend_pid);
                             intent.putExtra("roomname", ChattingRoomList.get(currentPosition).roomname);
                             intent.putExtra("my_pid", pid);
                             intent.putExtra("room_pid", ChattingRoomList.get(currentPosition).pid);
 
-                            // Start the ChattingActivity
                             context.startActivity(intent);
 
                         } catch (JSONException e) {
@@ -106,11 +102,6 @@ public class ChattingRoomAdapter extends RecyclerView.Adapter<ChattingRoomAdapte
             holder.tv_list_time.setText("");
         }
     }
-
-
-
-
-
     @Override
     public int getItemCount() {
         return ChattingRoomList.size();
